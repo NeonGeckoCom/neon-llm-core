@@ -1,6 +1,6 @@
 # This workflow will generate a release distribution and upload it to PyPI
 
-name: Publish Build and GitHub Release
+name: Publish PyPI and GitHub Release
 on:
   push:
     branches:

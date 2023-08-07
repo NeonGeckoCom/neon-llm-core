@@ -29,5 +29,5 @@ MQ:
       user: <MQ user>
       password: <MQ user's password>
   LLM_<LLM NAME uppercase>:
-      num_parallel_processes: < integer > 0 >
+      num_parallel_processes: <integer > 0>
 ```
