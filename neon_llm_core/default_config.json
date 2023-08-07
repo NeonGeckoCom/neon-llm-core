@@ -1,0 +1,12 @@
+{
+    "MQ": {
+        "server": "localhost",
+        "port": "5672",
+        "users": {
+            "neon_llm_fastchat": {
+                "user": "",
+                "password": ""
+            }
+        }
+    }
+}
