@@ -53,7 +53,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
     def register_consumers(self):
         for idx in range(self.model_config["num_parallel_processes"]):
-            self.register_consumer(name=f"neon_llm_{self.service_name}_ask_{idx}",
+            self.register_consumer(name=f"neon_llm_{self.name}_ask_{idx}",
                                    vhost=self.vhost,
                                    queue=self.queue_ask,
                                    callback=self.handle_request,
