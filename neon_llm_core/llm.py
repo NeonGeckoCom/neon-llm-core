@@ -107,3 +107,4 @@ class NeonLLM(ABC):
         matching_llm_role = cls.mq_to_llm_role.get(role)
         if not matching_llm_role:
             raise ValueError(f"role={role} is undefined, supported are: {list(cls.mq_to_llm_role)}")
+        return matching_llm_role
