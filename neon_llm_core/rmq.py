@@ -106,9 +106,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
         query = body["query"]
         history = body["history"]
+        persona = body.get("persona",{})
 
         try:
-            response = self.model.ask(message=query, chat_history=history)
+            response = self.model.ask(message=query, chat_history=history, persona=persona)
         except ValueError as err:
             LOG.error(f'ValueError={err}')
             response = 'Sorry, but I cannot respond to your message at the moment, please try again later'
@@ -131,12 +132,13 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
         query = body["query"]
         responses = body["responses"]
+        persona = body.get("persona",{})
 
         if not responses:
             sorted_answer_indexes = []
         else:
             try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(question=query, answers=responses)
+                sorted_answer_indexes = self.model.get_sorted_answer_indexes(question=query, answers=responses, persona=persona)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 sorted_answer_indexes = []
@@ -159,17 +161,19 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
         query = body["query"]
         options = body["options"]
+        persona = body.get("persona",{})
         responses = list(options.values())
 
         if not responses:
             opinion = "Sorry, but I got no options to choose from."
         else:
             try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(question=query, answers=responses)
+                sorted_answer_indexes = self.model.get_sorted_answer_indexes(question=query, answers=responses, persona=persona)
                 best_respondent_nick, best_response = list(options.items())[sorted_answer_indexes[0]]
                 opinion = self._ask_model_for_opinion(respondent_nick=best_respondent_nick,
                                                       question=query,
-                                                      answer=best_response)
+                                                      answer=best_response,
+                                                      persona=persona)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 opinion = "Sorry, but I experienced an issue trying to make up an opinion on this topic"
@@ -183,11 +187,11 @@ class NeonLLMMQConnector(MQConnector, ABC):
                           queue=routing_key)
         LOG.info(f"Handled ask request for message_id={message_id}")
 
-    def _ask_model_for_opinion(self, respondent_nick: str, question: str, answer: str) -> str:
+    def _ask_model_for_opinion(self, respondent_nick: str, question: str, answer: str, persona: dict) -> str:
         prompt = self.compose_opinion_prompt(respondent_nick=respondent_nick,
                                              question=question,
                                              answer=answer)
-        opinion = self.model.ask(message=prompt, chat_history=[])
+        opinion = self.model.ask(message=prompt, chat_history=[], persona=persona)
         LOG.info(f'Received LLM opinion={opinion}, prompt={prompt}')
         return opinion
 

@@ -60,14 +60,14 @@ class NeonLLM(ABC):
     def _system_prompt(self) -> str:
         pass
 
-    def ask(self, message: str, chat_history: List[List[str]]) -> str:
+    def ask(self, message: str, chat_history: List[List[str]], persona: dict) -> str:
         """ Generates llm response based on user message and (user, llm) chat history """
-        prompt = self._assemble_prompt(message, chat_history)
+        prompt = self._assemble_prompt(message, chat_history, persona)
         llm_text_output = self._call_model(prompt)
         return llm_text_output
 
     @abstractmethod
-    def get_sorted_answer_indexes(self, question: str, answers: List[str]) -> List[int]:
+    def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:
         """
             Creates sorted list of answer indexes with respect to order provided in :param answers
             Results should be sorted from best to worst
@@ -87,7 +87,7 @@ class NeonLLM(ABC):
         pass
 
     @abstractmethod
-    def _assemble_prompt(self, message: str, chat_history: List[List[str]]):
+    def _assemble_prompt(self, message: str, chat_history: List[List[str]], persona: dict):
         """
             Assembles prompt engineering logic
 
