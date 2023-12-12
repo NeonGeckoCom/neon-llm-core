@@ -37,27 +37,34 @@ class NeonLLMMQConnector(MQConnector, ABC):
     """
         Module for processing MQ requests to Fast Chat LLM
     """
-
-    opinion_prompt = ""
-
     def __init__(self):
         self.service_name = f'neon_llm_{self.name}'
 
         self.ovos_config = load_config()
-        mq_config = self.ovos_config.get("MQ", None)
+        mq_config = self.ovos_config.get("MQ", dict())
         super().__init__(config=mq_config, service_name=self.service_name)
         self.vhost = "/llm"
 
         self.register_consumers()
         self._model = None
+        self._bots = list()
 
         if self.ovos_config.get("llm_bots", {}).get(self.name):
+            from neon_llm_core.chatbot import LLMBot
             LOG.info(f"Chatbot(s) configured for: {self.name}")
             for persona in self.ovos_config['llm_bots'][self.name]:
+                # Spawn a service for each persona to support @user requests
                 if not persona.get('enabled', True):
                     LOG.warning(f"Persona disabled: {persona['name']}")
                     continue
-                # TODO: Create Chatbot instance for persona
+                # Get a configured username to use for LLM submind connections
+                if mq_config.get("users", {}).get("neon_llm_submind"):
+                    self.ovos_config["MQ"]["users"][persona['name']] = \
+                        mq_config['users']['neon_llm_submind']
+                self._bots.append(LLMBot(llm_name=self.name,
+                                         service_id=persona['name'],
+                                         persona=persona,
+                                         config=self.ovos_config))
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
@@ -106,21 +113,23 @@ class NeonLLMMQConnector(MQConnector, ABC):
     @create_mq_callback()
     def handle_request(self, body: dict):
         """
-            Handles ask requests from MQ to LLM
-            :param body: request body (dict)
+        Handles ask requests from MQ to LLM
+        :param body: request body (dict)
         """
         message_id = body["message_id"]
         routing_key = body["routing_key"]
 
         query = body["query"]
         history = body["history"]
-        persona = body.get("persona",{})
+        persona = body.get("persona", {})
 
         try:
-            response = self.model.ask(message=query, chat_history=history, persona=persona)
+            response = self.model.ask(message=query, chat_history=history,
+                                      persona=persona)
         except ValueError as err:
             LOG.error(f'ValueError={err}')
-            response = 'Sorry, but I cannot respond to your message at the moment, please try again later'
+            response = ('Sorry, but I cannot respond to your message at the '
+                        'moment, please try again later')
         api_response = {
             "message_id": message_id,
             "response": response
@@ -146,7 +155,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
             sorted_answer_indexes = []
         else:
             try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(question=query, answers=responses, persona=persona)
+                sorted_answer_indexes = self.model.get_sorted_answer_indexes(
+                    question=query, answers=responses, persona=persona)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 sorted_answer_indexes = []
@@ -176,15 +186,17 @@ class NeonLLMMQConnector(MQConnector, ABC):
             opinion = "Sorry, but I got no options to choose from."
         else:
             try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(question=query, answers=responses, persona=persona)
-                best_respondent_nick, best_response = list(options.items())[sorted_answer_indexes[0]]
-                opinion = self._ask_model_for_opinion(respondent_nick=best_respondent_nick,
-                                                      question=query,
-                                                      answer=best_response,
-                                                      persona=persona)
+                sorted_answer_indexes = self.model.get_sorted_answer_indexes(
+                    question=query, answers=responses, persona=persona)
+                best_respondent_nick, best_response = list(options.items())[
+                    sorted_answer_indexes[0]]
+                opinion = self._ask_model_for_opinion(
+                    respondent_nick=best_respondent_nick,
+                    question=query, answer=best_response, persona=persona)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
-                opinion = "Sorry, but I experienced an issue trying to make up an opinion on this topic"
+                opinion = ("Sorry, but I experienced an issue trying to form "
+                           "an opinion on this topic")
 
         api_response = {
             "message_id": message_id,
@@ -195,15 +207,24 @@ class NeonLLMMQConnector(MQConnector, ABC):
                           queue=routing_key)
         LOG.info(f"Handled ask request for message_id={message_id}")
 
-    def _ask_model_for_opinion(self, respondent_nick: str, question: str, answer: str, persona: dict) -> str:
+    def _ask_model_for_opinion(self, respondent_nick: str, question: str,
+                               answer: str, persona: dict) -> str:
         prompt = self.compose_opinion_prompt(respondent_nick=respondent_nick,
                                              question=question,
                                              answer=answer)
-        opinion = self.model.ask(message=prompt, chat_history=[], persona=persona)
+        opinion = self.model.ask(message=prompt, chat_history=[],
+                                 persona=persona)
         LOG.info(f'Received LLM opinion={opinion}, prompt={prompt}')
         return opinion
 
     @staticmethod
     @abstractmethod
-    def compose_opinion_prompt(respondent_nick: str, question: str, answer: str) -> str:
+    def compose_opinion_prompt(respondent_nick: str, question: str,
+                               answer: str) -> str:
+        """
+        Format a response into a prompt to evaluate another submind's response
+        @param respondent_nick: Name of submind providing a response
+        @param question: Prompt being responded to
+        @param answer: respondent's response to the question
+        """
         pass
