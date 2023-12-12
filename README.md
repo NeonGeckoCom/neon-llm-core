@@ -40,11 +40,11 @@ One LLM may define multiple personas to participate as:
 llm_bots:
   <LLM Name>:
     - name: Assistant
-      persona: You are a personal assistant who responds in 40 words or less
+      description: You are a personal assistant who responds in 40 words or less
     - name: Author
-      persona: You are author and expert in literary history
+      description: You are an author and expert in literary history
     - name: Student
-      persona: You are a graduate student working in the field of artificial intelligence
+      description: You are a graduate student working in the field of artificial intelligence
       enabled: False
 ```
 > `LLM Name` is defined in the property `NeonLLMMQConnector.name`
