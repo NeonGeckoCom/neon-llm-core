@@ -62,7 +62,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
                     self.ovos_config["MQ"]["users"][persona['name']] = \
                         mq_config['users']['neon_llm_submind']
                 self._bots.append(LLMBot(llm_name=self.name,
-                                         service_id=persona['name'],
+                                         service_name=persona['name'],
                                          persona=persona,
                                          config=self.ovos_config))
 
