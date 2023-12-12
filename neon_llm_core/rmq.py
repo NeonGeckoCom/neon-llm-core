@@ -62,7 +62,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
                     self.ovos_config["MQ"]["users"][persona['name']] = \
                         mq_config['users']['neon_llm_submind']
                 bot = LLMBot(llm_name=self.name, service_name=persona['name'],
-                             persona=persona, config=self.ovos_config)
+                             persona=persona, config=self.ovos_config,
+                             vhost=self.vhost)
                 bot.run()
                 LOG.info(f"Started chatbot: {bot.service_name}")
                 self._bots.append(bot)
