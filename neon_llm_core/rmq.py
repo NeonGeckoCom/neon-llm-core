@@ -61,10 +61,11 @@ class NeonLLMMQConnector(MQConnector, ABC):
                 if mq_config.get("users", {}).get("neon_llm_submind"):
                     self.ovos_config["MQ"]["users"][persona['name']] = \
                         mq_config['users']['neon_llm_submind']
-                self._bots.append(LLMBot(llm_name=self.name,
-                                         service_name=persona['name'],
-                                         persona=persona,
-                                         config=self.ovos_config))
+                bot = LLMBot(llm_name=self.name, service_name=persona['name'],
+                             persona=persona, config=self.ovos_config)
+                bot.run()
+                LOG.info(f"Started chatbot: {bot.service_name}")
+                self._bots.append(bot)
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
