@@ -91,7 +91,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
     @property
     def model_config(self):
-        return self.ovos_config.get(f"LLM_{self.name.upper()}", None)
+        if f"LLM_{self.name.upper()}" not in self.ovos_config:
+            LOG.warning(f"No config for {self.name} found in "
+                        f"{list(self.ovos_config.keys())}")
+        return self.ovos_config.get(f"LLM_{self.name.upper()}", dict())
     
     @property
     def queue_ask(self):

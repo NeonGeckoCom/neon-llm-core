@@ -78,6 +78,7 @@ setup(
     license='BSD-3.0',
     packages=setuptools.find_packages(),
     install_requires=get_requirements("requirements.txt"),
+    extras_require={"chatbots": get_requirements("chatbots.txt")},
     zip_safe=True,
     classifiers=[
         'Intended Audience :: Developers',
