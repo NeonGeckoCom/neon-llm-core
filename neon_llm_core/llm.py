@@ -31,9 +31,20 @@ class NeonLLM(ABC):
 
     mq_to_llm_role = {}
 
-    def __init__(self, config):
+    def __init__(self, config: dict):
+        """
+        @param config: Dict LLM configuration for this specific LLM
+        """
+        self._llm_config = config
         self._tokenizer = None
         self._model = None
+
+    @property
+    def llm_config(self):
+        """
+        Get the configuration for this LLM instance
+        """
+        return self._llm_config
 
     @property
     @abstractmethod

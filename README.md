@@ -31,3 +31,20 @@ MQ:
   LLM_<LLM NAME uppercase>:
       num_parallel_processes: <integer > 0>
 ```
+
+## Enabling Chatbot personas
+An LLM may be configured to connect to a `/chatbots` vhost and participate in
+discussions as described in the [chatbots project](https://github.com/NeonGeckoCom/chatbot-core).
+One LLM may define multiple personas to participate as:
+```yaml
+llm_bots:
+  <LLM Name>:
+    - name: Assistant
+      persona: You are a personal assistant who responds in 40 words or less
+    - name: Author
+      persona: You are author and expert in literary history
+    - name: Student
+      persona: You are a graduate student working in the field of artificial intelligence
+      enabled: False
+```
+> `LLM Name` is defined in the property `NeonLLMMQConnector.name`

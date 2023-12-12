@@ -51,8 +51,16 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self.register_consumers()
         self._model = None
 
+        if self.ovos_config.get("llm_bots", {}).get(self.name):
+            LOG.info(f"Chatbot(s) configured for: {self.name}")
+            for persona in self.ovos_config['llm_bots'][self.name]:
+                if not persona.get('enabled', True):
+                    LOG.warning(f"Persona disabled: {persona['name']}")
+                    continue
+                # TODO: Create Chatbot instance for persona
+
     def register_consumers(self):
-        for idx in range(self.model_config["num_parallel_processes"]):
+        for idx in range(self.model_config.get("num_parallel_processes", 1)):
             self.register_consumer(name=f"neon_llm_{self.name}_ask_{idx}",
                                    vhost=self.vhost,
                                    queue=self.queue_ask,
