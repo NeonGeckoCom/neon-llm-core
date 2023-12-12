@@ -1,1 +1,1 @@
-chatbot-core
+neon-chatbot-core
