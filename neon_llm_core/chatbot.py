@@ -104,12 +104,14 @@ class LLMBot(ChatBot):
         :param shout: provided should string
         :returns response string from LLM API
         """
-        LOG.debug(f"Sending to {self.current_llm_mq_config.vhost}/{self.current_llm_mq_config.ask_response_queue}")
+        LOG.debug(f"Sending to {self.current_llm_mq_config.vhost}/"
+                  f"{self.current_llm_mq_config.ask_response_queue}")
         return send_mq_request(vhost=self.current_llm_mq_config.vhost,
                                request_data={"query": shout,
                                              "history": [],
                                              "persona": self.persona},
-                               target_queue=self.current_llm_mq_config.ask_response_queue)
+                               target_queue=self.current_llm_mq_config.
+                               ask_response_queue)
 
     def _get_llm_api_opinion(self, prompt: str, options: dict) -> dict:
         """
@@ -122,7 +124,8 @@ class LLMBot(ChatBot):
                                request_data={"query": prompt,
                                              "options": options,
                                              "persona": self.persona},
-                               target_queue=self.current_llm_mq_config.ask_discusser_queue)
+                               target_queue=self.current_llm_mq_config.
+                               ask_discusser_queue)
 
     def _get_llm_api_choice(self, prompt: str, responses: List[str]) -> dict:
         """
@@ -135,7 +138,8 @@ class LLMBot(ChatBot):
                                request_data={"query": prompt,
                                              "responses": responses,
                                              "persona": self.persona},
-                               target_queue=self.current_llm_mq_config.ask_appraiser_queue)
+                               target_queue=self.current_llm_mq_config.
+                               ask_appraiser_queue)
 
     @staticmethod
     def get_llm_mq_config(llm_name: str) -> LLMMQConfig:

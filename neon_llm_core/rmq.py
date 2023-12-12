@@ -24,6 +24,7 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from abc import abstractmethod, ABC
+from threading import Thread
 
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
@@ -64,7 +65,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
                 bot = LLMBot(llm_name=self.name, service_name=persona['name'],
                              persona=persona, config=self.ovos_config,
                              vhost="/chatbots")
-                bot.run()
+                Thread(target=bot.run, daemon=True).start()
                 LOG.info(f"Started chatbot: {bot.service_name}")
                 self._bots.append(bot)
 
