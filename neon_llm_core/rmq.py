@@ -23,9 +23,8 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from abc import abstractmethod, ABC
-from threading import Thread
 
+from abc import abstractmethod, ABC
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from ovos_utils.log import LOG
@@ -65,7 +64,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
                 bot = LLMBot(llm_name=self.name, service_name=persona['name'],
                              persona=persona, config=self.ovos_config,
                              vhost="/chatbots")
-                Thread(target=bot.run, daemon=True).start()
+                bot.run()
                 LOG.info(f"Started chatbot: {bot.service_name}")
                 self._bots.append(bot)
 
