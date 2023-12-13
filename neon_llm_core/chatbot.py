@@ -37,10 +37,11 @@ class LLMBot(ChatBot):
     def __init__(self, *args, **kwargs):
         ChatBot.__init__(self, *args, **kwargs)
         self.bot_type = "submind"
-        self.base_llm = kwargs.get("llm_name")  # chatgpt, fastchat, etc.
+        self.base_llm = kwargs.get("llm_name")  # chat_gpt, fastchat, etc.
         self.persona = kwargs.get("persona")
-        self.current_llm_mq_config = self.get_llm_mq_config(self.base_llm)
-        LOG.info(f'Initialised config for persona={self._bot_id}')
+        self.mq_queue_config = self.get_llm_mq_config(self.base_llm)
+        LOG.info(f'Initialised config for llm={self.base_llm}|'
+                 f'persona={self._bot_id}')
         self.prompt_id_to_shout = dict()
 
     @property
@@ -104,14 +105,20 @@ class LLMBot(ChatBot):
         :param shout: provided should string
         :returns response string from LLM API
         """
-        LOG.debug(f"Sending to {self.current_llm_mq_config.vhost}/"
-                  f"{self.current_llm_mq_config.ask_response_queue}")
-        return send_mq_request(vhost=self.current_llm_mq_config.vhost,
-                               request_data={"query": shout,
-                                             "history": [],
-                                             "persona": self.persona},
-                               target_queue=self.current_llm_mq_config.
-                               ask_response_queue)
+        LOG.info(f"Sending to {self.mq_queue_config.vhost}/"
+                 f"{self.mq_queue_config.ask_response_queue}")
+        try:
+            return send_mq_request(vhost=self.mq_queue_config.vhost,
+                                   request_data={"query": shout,
+                                                 "history": [],
+                                                 "persona": self.persona},
+                                   target_queue=self.mq_queue_config.
+                                   ask_response_queue)
+        except Exception as e:
+            LOG.exception(f"Failed to get response on "
+                          f"{self.mq_queue_config.vhost}/"
+                          f"{self.mq_queue_config.ask_response_queue}: "
+                          f"{e}")
 
     def _get_llm_api_opinion(self, prompt: str, options: dict) -> dict:
         """
@@ -120,11 +127,11 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :returns response data from LLM API
         """
-        return send_mq_request(vhost=self.current_llm_mq_config.vhost,
+        return send_mq_request(vhost=self.mq_queue_config.vhost,
                                request_data={"query": prompt,
                                              "options": options,
                                              "persona": self.persona},
-                               target_queue=self.current_llm_mq_config.
+                               target_queue=self.mq_queue_config.
                                ask_discusser_queue)
 
     def _get_llm_api_choice(self, prompt: str, responses: List[str]) -> dict:
@@ -134,11 +141,11 @@ class LLMBot(ChatBot):
         :param responses: list of answers to select from
         :returns response data from LLM API
         """
-        return send_mq_request(vhost=self.current_llm_mq_config.vhost,
+        return send_mq_request(vhost=self.mq_queue_config.vhost,
                                request_data={"query": prompt,
                                              "responses": responses,
                                              "persona": self.persona},
-                               target_queue=self.current_llm_mq_config.
+                               target_queue=self.mq_queue_config.
                                ask_appraiser_queue)
 
     @staticmethod
