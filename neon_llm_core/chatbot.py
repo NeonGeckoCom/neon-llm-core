@@ -105,15 +105,15 @@ class LLMBot(ChatBot):
         :param shout: provided should string
         :returns response string from LLM API
         """
-        LOG.info(f"Sending to {self.mq_queue_config.vhost}/"
-                 f"{self.mq_queue_config.ask_response_queue}")
+        queue = self.mq_queue_config.ask_response_queue
+        LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
         try:
             return send_mq_request(vhost=self.mq_queue_config.vhost,
                                    request_data={"query": shout,
                                                  "history": [],
                                                  "persona": self.persona},
-                                   target_queue=self.mq_queue_config.
-                                   ask_response_queue)
+                                   target_queue=queue,
+                                   response_queue=f"{queue}.response")
         except Exception as e:
             LOG.exception(f"Failed to get response on "
                           f"{self.mq_queue_config.vhost}/"
@@ -127,12 +127,13 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :returns response data from LLM API
         """
+        queue = self.mq_queue_config.ask_discusser_queue
         return send_mq_request(vhost=self.mq_queue_config.vhost,
                                request_data={"query": prompt,
                                              "options": options,
                                              "persona": self.persona},
-                               target_queue=self.mq_queue_config.
-                               ask_discusser_queue)
+                               target_queue=queue,
+                               response_queue=f"{queue}.response")
 
     def _get_llm_api_choice(self, prompt: str, responses: List[str]) -> dict:
         """
@@ -141,12 +142,13 @@ class LLMBot(ChatBot):
         :param responses: list of answers to select from
         :returns response data from LLM API
         """
+        queue = self.mq_queue_config.ask_appraiser_queue
         return send_mq_request(vhost=self.mq_queue_config.vhost,
                                request_data={"query": prompt,
                                              "responses": responses,
                                              "persona": self.persona},
-                               target_queue=self.mq_queue_config.
-                               ask_appraiser_queue)
+                               target_queue=queue,
+                               response_queue=f"{queue}.response")
 
     @staticmethod
     def get_llm_mq_config(llm_name: str) -> LLMMQConfig:
