@@ -139,6 +139,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
             "message_id": message_id,
             "response": response
         }
+        LOG.info(f"Sending response: {response}")
         self.send_message(request_data=api_response,
                           queue=routing_key)
         LOG.info(f"Handled ask request for message_id={message_id}")
@@ -154,7 +155,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
         query = body["query"]
         responses = body["responses"]
-        persona = body.get("persona",{})
+        persona = body.get("persona", {})
 
         if not responses:
             sorted_answer_indexes = []
@@ -184,7 +185,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
         query = body["query"]
         options = body["options"]
-        persona = body.get("persona",{})
+        persona = body.get("persona", {})
         responses = list(options.values())
 
         if not responses:
