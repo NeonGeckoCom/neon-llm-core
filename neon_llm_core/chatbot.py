@@ -86,7 +86,8 @@ class LLMBot(ChatBot):
         :param context: message context
         """
         if options:
-            options = {k: v for k, v in options.items() if k != self.service_name}
+            options = {k: v for k, v in options.items()
+                       if k != self.service_name}
             bots = list(options)
             bot_responses = list(options.values())
             LOG.info(f'bots={bots}, answers={bot_responses}')
@@ -94,7 +95,7 @@ class LLMBot(ChatBot):
             answer_data = self._get_llm_api_choice(prompt=prompt,
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
-            sorted_answer_indexes = answer_data['sorted_answer_indexes']
+            sorted_answer_indexes = answer_data.get('sorted_answer_indexes')
             if sorted_answer_indexes:
                 return bots[sorted_answer_indexes[0]]
         return "abstain"
