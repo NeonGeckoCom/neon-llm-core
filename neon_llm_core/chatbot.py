@@ -119,6 +119,7 @@ class LLMBot(ChatBot):
                           f"{self.mq_queue_config.vhost}/"
                           f"{self.mq_queue_config.ask_response_queue}: "
                           f"{e}")
+            return dict()
 
     def _get_llm_api_opinion(self, prompt: str, options: dict) -> dict:
         """
