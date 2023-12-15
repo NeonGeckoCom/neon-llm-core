@@ -1,1 +1,2 @@
-neon-chatbot-core
+# neon-chatbot-core
+neon-chatbot-core@git+https://github.com/neongeckocom/chatbot-core@FEAT_CopyLogPerBot
