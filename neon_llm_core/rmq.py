@@ -25,6 +25,8 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from abc import abstractmethod, ABC
+from threading import Thread
+
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from ovos_utils.log import LOG
@@ -121,12 +123,18 @@ class NeonLLMMQConnector(MQConnector, ABC):
         Handles ask requests from MQ to LLM
         :param body: request body (dict)
         """
-        message_id = body["message_id"]
-        routing_key = body["routing_key"]
+        # Handle this asynchronously so multiple subminds can be handled
+        # concurrently
+        Thread(target=self._handle_request_async, args=(body,),
+               daemon=True).start()
 
-        query = body["query"]
-        history = body["history"]
-        persona = body.get("persona", {})
+    def _handle_request_async(self, request: dict):
+        message_id = request["message_id"]
+        routing_key = request["routing_key"]
+
+        query = request["query"]
+        history = request["history"]
+        persona = request.get("persona", {})
 
         try:
             response = self.model.ask(message=query, chat_history=history,
