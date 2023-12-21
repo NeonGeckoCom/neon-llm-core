@@ -26,6 +26,7 @@
 
 import json
 
+from dataclasses import dataclass
 from os.path import join, dirname, isfile
 from ovos_utils.log import LOG
 from ovos_config.config import Configuration
@@ -48,3 +49,11 @@ def load_config() -> dict:
         with open(default_config_path) as f:
             config = json.load(f)
     return config
+
+
+@dataclass
+class LLMMQConfig:
+    ask_response_queue: str
+    ask_appraiser_queue: str
+    ask_discusser_queue: str
+    vhost: str = '/llm'
