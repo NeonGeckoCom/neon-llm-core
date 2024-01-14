@@ -29,7 +29,7 @@ from chatbot_core.v2 import ChatBot
 from neon_mq_connector.utils.client_utils import send_mq_request
 from ovos_utils.log import LOG
 
-from neon_llm_core.config import LLMMQConfig
+from neon_llm_core.utils.config import LLMMQConfig
 
 
 class LLMBot(ChatBot):
