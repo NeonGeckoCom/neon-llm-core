@@ -31,8 +31,10 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from ovos_utils.log import LOG
 
-from neon_llm_core.config import load_config
+from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
+from neon_llm_core.utils.constants import LLM_VHOST
+from neon_llm_core.utils.personas.provider import PersonasProvider
 
 
 class NeonLLMMQConnector(MQConnector, ABC):
@@ -45,11 +47,13 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self.ovos_config = load_config()
         mq_config = self.ovos_config.get("MQ", dict())
         super().__init__(config=mq_config, service_name=self.service_name)
-        self.vhost = "/llm"
+        self.vhost = LLM_VHOST
 
         self.register_consumers()
         self._model = None
         self._bots = list()
+        self._personas_provider = PersonasProvider(service_name=self.name,
+                                                   ovos_config=self.ovos_config)
 
         if self.ovos_config.get("llm_bots", {}).get(self.name):
             from neon_llm_core.chatbot import LLMBot
@@ -242,3 +246,15 @@ class NeonLLMMQConnector(MQConnector, ABC):
         @param answer: respondent's response to the question
         """
         pass
+
+    def run(self, run_consumers: bool = True, run_sync: bool = True,
+            run_observer: bool = True, **kwargs):
+        super().run(run_consumers=run_consumers,
+                    run_sync=run_sync,
+                    run_observer=run_observer,
+                    **kwargs)
+        self._personas_provider.start_sync()
+
+    def stop(self):
+        super().stop()
+        self._personas_provider.stop_sync()

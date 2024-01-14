@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2021 Neongecko.com Inc.
+# Copyright 2008-2021 NeonGecko.com Inc.
 # BSD-3
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -23,37 +23,3 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-import json
-
-from dataclasses import dataclass
-from os.path import join, dirname, isfile
-from ovos_utils.log import LOG
-from ovos_config.config import Configuration
-
-
-def load_config() -> dict:
-    """
-    Load and return a configuration object,
-    """
-    legacy_config_path = "/app/app/config.json"
-    if isfile(legacy_config_path):
-        LOG.warning(f"Deprecated configuration found at {legacy_config_path}")
-        with open(legacy_config_path) as f:
-            config = json.load(f)
-        return config
-    config = Configuration()
-    if not config:
-        LOG.warning(f"No configuration found! falling back to defaults")
-        default_config_path = join(dirname(__file__), "default_config.json")
-        with open(default_config_path) as f:
-            config = json.load(f)
-    return config
-
-
-@dataclass
-class LLMMQConfig:
-    ask_response_queue: str
-    ask_appraiser_queue: str
-    ask_discusser_queue: str
-    vhost: str = '/llm'
