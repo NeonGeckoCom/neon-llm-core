@@ -45,7 +45,6 @@ class PersonaHandlersState:
 
     def init_default_handlers(self):
         if self.ovos_config.get("llm_bots", {}).get(self.service_name):
-            from neon_llm_core.chatbot import LLMBot
             LOG.info(f"Chatbot(s) configured for: {self.service_name}")
             for persona in self.ovos_config['llm_bots'][self.service_name]:
                 self.add_persona_handler(persona=persona)

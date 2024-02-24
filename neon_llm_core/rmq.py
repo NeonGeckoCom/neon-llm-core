@@ -55,25 +55,6 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self._personas_provider = PersonasProvider(service_name=self.name,
                                                    ovos_config=self.ovos_config)
 
-        if self.ovos_config.get("llm_bots", {}).get(self.name):
-            from neon_llm_core.chatbot import LLMBot
-            LOG.info(f"Chatbot(s) configured for: {self.name}")
-            for persona in self.ovos_config['llm_bots'][self.name]:
-                # Spawn a service for each persona to support @user requests
-                if not persona.get('enabled', True):
-                    LOG.warning(f"Persona disabled: {persona['name']}")
-                    continue
-                # Get a configured username to use for LLM submind connections
-                if mq_config.get("users", {}).get("neon_llm_submind"):
-                    self.ovos_config["MQ"]["users"][persona['name']] = \
-                        mq_config['users']['neon_llm_submind']
-                bot = LLMBot(llm_name=self.name, service_name=persona['name'],
-                             persona=persona, config=self.ovos_config,
-                             vhost="/chatbots")
-                bot.run()
-                LOG.info(f"Started chatbot: {bot.service_name}")
-                self._bots.append(bot)
-
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
             self.register_consumer(name=f"neon_llm_{self.name}_ask_{idx}",
