@@ -77,8 +77,7 @@ class PersonasProvider:
         queue = "get_configured_personas"
         response = send_mq_request(vhost=LLM_VHOST,
                                    request_data={"service_name": self.service_name},
-                                   target_queue=queue,
-                                   response_queue=f'{queue}.{self.service_name}.response')
+                                   target_queue=queue)
         self.personas = response.get('items', [])
         for persona in self.personas:
             if persona:

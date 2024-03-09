@@ -37,7 +37,7 @@ class LLMBot(ChatBot):
     def __init__(self, *args, **kwargs):
         ChatBot.__init__(self, *args, **kwargs)
         self.bot_type = "submind"
-        self.base_llm = kwargs.get("llm_name")  # chat_gpt, fastchat, etc.
+        self.base_llm = kwargs.get("llm_name")  # chatgpt, fastchat, etc.
         self.persona = kwargs.get("persona")
         self.mq_queue_config = self.get_llm_mq_config(self.base_llm)
         LOG.info(f'Initialised config for llm={self.base_llm}|'
