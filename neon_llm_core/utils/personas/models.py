@@ -23,15 +23,16 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+from typing import Optional
 
 from pydantic import BaseModel, computed_field
 
 
 class PersonaModel(BaseModel):
     name: str
-    user_id: str = None
     description: str
     enabled: bool = True
+    user_id: Optional[str] = None
 
     @computed_field
     @property
