@@ -31,6 +31,7 @@ from neon_mq_connector.utils.client_utils import send_mq_request
 from ovos_utils.log import LOG
 
 from neon_llm_core.utils.constants import LLM_VHOST
+from neon_llm_core.utils.personas.models import PersonaModel
 from neon_llm_core.utils.personas.state import PersonaHandlersState
 
 
@@ -38,6 +39,7 @@ class PersonasProvider:
 
     PERSONA_STATE_TTL = int(os.getenv("PERSONA_STATE_TTL", 15 * 60))
     PERSONA_SYNC_INTERVAL = int(os.getenv("PERSONA_SYNC_INTERVAL", 5 * 60))
+    GET_CONFIGURED_PERSONAS_QUEUE = "get_configured_personas"
 
     def __init__(self, service_name: str, ovos_config: dict):
         self.service_name = service_name
@@ -74,14 +76,13 @@ class PersonasProvider:
             self._persona_handlers_state.init_default_handlers()
 
     def _fetch_persona_config(self):
-        queue = "get_configured_personas"
         response = send_mq_request(vhost=LLM_VHOST,
                                    request_data={"service_name": self.service_name},
-                                   target_queue=queue)
+                                   target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE)
         self.personas = response.get('items', [])
         for persona in self.personas:
-            if persona:
-                self._persona_handlers_state.add_persona_handler(persona=persona)
+            persona = PersonaModel.parse_obj(obj=persona)
+            self._persona_handlers_state.add_persona_handler(persona=persona)
 
     def start_sync(self):
         self.persona_sync_thread.start()
