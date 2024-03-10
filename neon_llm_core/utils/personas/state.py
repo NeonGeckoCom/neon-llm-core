@@ -62,7 +62,7 @@ class PersonaHandlersState:
                 except Exception as ex:
                     LOG.warning(f'Failed to gracefully stop {persona.id}, ex={str(ex)}')
             else:
-                LOG.warning('Persona config provided is identical to existing, skipping')
+                LOG.debug('Persona config provided is identical to existing, skipping')
                 return self._created_items[persona.id]
         if not persona.enabled:
             LOG.warning(f"Persona disabled: '{persona.id}'")
