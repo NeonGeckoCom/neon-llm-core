@@ -86,6 +86,7 @@ class PersonasProvider:
             self._persona_handlers_state.add_persona_handler(persona=persona)
 
     def start_sync(self):
+        self._fetch_persona_config()
         self.persona_sync_thread.start()
 
     def stop_sync(self):

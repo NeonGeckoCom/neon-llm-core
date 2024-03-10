@@ -51,12 +51,16 @@ class PersonaHandlersState:
                 self.add_persona_handler(persona=PersonaModel.parse_obj(obj=persona))
 
     def add_persona_handler(self, persona: PersonaModel) -> Union[LLMBot, None]:
+        persona_dict = persona.model_dump()
         if persona.id in list(self._created_items):
-            if self._created_items[persona.id].persona != persona:
+            if self._created_items[persona.id].persona != persona_dict:
                 LOG.warning(f"Overriding already existing persona: '{persona.id}' with new data={persona}")
-                self._created_items[persona.id].stop()
-                # time to gracefully stop the submind
-                time.sleep(0.5)
+                try:
+                    self._created_items[persona.id].stop()
+                    # time to gracefully stop the submind
+                    time.sleep(0.5)
+                except Exception as ex:
+                    LOG.warning(f'Failed to gracefully stop {persona.id}, ex={str(ex)}')
             else:
                 LOG.warning('Persona config provided is identical to existing, skipping')
                 return self._created_items[persona.id]
@@ -66,7 +70,7 @@ class PersonaHandlersState:
         # Get a configured username to use for LLM submind connections
         self.ovos_config["MQ"]["users"][persona.name] = self.mq_config['users']['neon_llm_submind']
         bot = LLMBot(llm_name=self.service_name, service_name=persona.name,
-                     persona=persona.model_dump(), config=self.ovos_config,
+                     persona=persona_dict, config=self.ovos_config,
                      vhost="/chatbots")
         bot.run()
         LOG.info(f"Started chatbot: {bot.service_name}")
