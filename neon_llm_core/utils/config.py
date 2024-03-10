@@ -41,7 +41,6 @@ from neon_llm_core.utils.constants import LLM_VHOST
 def load_legacy_config() -> Union[dict, None]:
     legacy_config_path = os.getenv("NEON_LLM_LEGACY_CONFIG", "/app/app/config.json")
     if isfile(legacy_config_path):
-        LOG.warning(f"Deprecated configuration found at {legacy_config_path}")
         with open(legacy_config_path) as f:
             config = json.load(f)
         init_log(config=config)
@@ -65,9 +64,9 @@ def load_config() -> Union[dict, None]:
     """
     configs_loading_order = (load_legacy_config, load_ovos_config, load_default_config,)
     for config_loader in configs_loading_order:
-        LOG.info(f'Trying to load configs with {config_loader.__name__}')
         config = config_loader()
         if config:
+            LOG.info(f'Applied configs from loader={config_loader.__name__}()')
             return config
 
 
