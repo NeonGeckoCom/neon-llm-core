@@ -25,6 +25,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import json
+import os
 
 from dataclasses import dataclass
 from os.path import join, dirname, isfile
@@ -38,7 +39,7 @@ def load_config() -> dict:
     """
     Load and return a configuration object,
     """
-    legacy_config_path = "/app/app/config.json"
+    legacy_config_path = os.getenv("NEON_LLM_LEGACY_CONFIG", "/app/app/config.json")
     if isfile(legacy_config_path):
         LOG.warning(f"Deprecated configuration found at {legacy_config_path}")
         with open(legacy_config_path) as f:
