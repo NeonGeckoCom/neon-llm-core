@@ -81,6 +81,7 @@ class PersonasProvider:
                                    target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE)
         self.personas = response.get('items', [])
         for persona in self.personas:
+            persona.setdefault('name', persona.pop('persona_name', None))
             persona = PersonaModel.parse_obj(obj=persona)
             self._persona_handlers_state.add_persona_handler(persona=persona)
 
