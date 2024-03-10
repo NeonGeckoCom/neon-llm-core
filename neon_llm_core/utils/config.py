@@ -36,6 +36,7 @@ from ovos_utils.log import LOG
 from ovos_config.config import Configuration
 
 from neon_llm_core.utils.constants import LLM_VHOST
+import neon_mq_connector.utils.client_utils as mq_connector_client_utils
 
 
 def load_legacy_config() -> Union[dict, None]:
@@ -44,6 +45,7 @@ def load_legacy_config() -> Union[dict, None]:
         with open(legacy_config_path) as f:
             config = json.load(f)
         init_log(config=config)
+        mq_connector_client_utils._default_mq_config = config.get("MQ")
         return config
 
 
