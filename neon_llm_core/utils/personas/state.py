@@ -69,8 +69,9 @@ class PersonaHandlersState:
             LOG.warning(f"Persona disabled: '{persona.id}'")
             return
         # Get a configured username to use for LLM submind connections
-        self.ovos_config["MQ"]["users"][persona.name] = self.mq_config['users']['neon_llm_submind']
-        bot = LLMBot(llm_name=self.service_name, service_name=f"{persona.id}-{self.service_name}",
+        persona_id = f"{persona.id}-{self.service_name}"
+        self.ovos_config["MQ"]["users"][persona_id] = self.mq_config['users']['neon_llm_submind']
+        bot = LLMBot(llm_name=self.service_name, service_name=persona_id,
                      persona=persona_dict, config=self.ovos_config,
                      vhost="/chatbots")
         bot.run()
