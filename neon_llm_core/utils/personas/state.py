@@ -70,7 +70,7 @@ class PersonaHandlersState:
             return
         # Get a configured username to use for LLM submind connections
         self.ovos_config["MQ"]["users"][persona.name] = self.mq_config['users']['neon_llm_submind']
-        bot = LLMBot(llm_name=self.service_name, service_name=persona.name,
+        bot = LLMBot(llm_name=self.service_name, service_name=f"{persona.id}-{self.service_name}",
                      persona=persona_dict, config=self.ovos_config,
                      vhost="/chatbots")
         bot.run()
