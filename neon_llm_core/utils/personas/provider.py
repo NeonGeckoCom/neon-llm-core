@@ -70,7 +70,7 @@ class PersonasProvider:
         if data and isinstance(data, list):
             self._personas = data
             self._persona_last_sync = now
-            self._persona_handlers_state.clean_up_personas(exclude_items=self._personas)
+            self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
         elif now - self._persona_last_sync > self.PERSONA_STATE_TTL:
             LOG.warning(f'Persona state TTL expired, resetting personas config')
             self._personas = []
