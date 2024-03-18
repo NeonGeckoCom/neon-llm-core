@@ -27,7 +27,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
-from typing import Dict, Union
+from typing import Dict, Union, List
 
 from ovos_utils import LOG
 
@@ -45,6 +45,7 @@ class PersonaHandlersState:
         self.init_default_handlers()
 
     def init_default_handlers(self):
+        self._created_items = {}
         if self.ovos_config.get("llm_bots", {}).get(self.service_name):
             LOG.info(f"Chatbot(s) configured for: {self.service_name}")
             for persona in self.ovos_config['llm_bots'][self.service_name]:
@@ -76,3 +77,11 @@ class PersonaHandlersState:
         LOG.info(f"Started chatbot: {bot.service_name}")
         self._created_items[persona.id] = bot
         return bot
+
+    def clean_up_personas(self, ignore_items: List[PersonaModel] = None):
+        connected_personas = set(self._created_items)
+        ignored_persona_ids = set(persona.id for persona in ignore_items or [])
+        personas_to_remove = connected_personas - ignored_persona_ids
+        for persona_id in personas_to_remove:
+            LOG.info(f'Removing persona_id = {persona_id}')
+            self._created_items.pop(persona_id, None)

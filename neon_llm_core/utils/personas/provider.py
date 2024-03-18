@@ -70,6 +70,7 @@ class PersonasProvider:
         if data and isinstance(data, list):
             self._personas = data
             self._persona_last_sync = now
+            self._persona_handlers_state.clean_up_personas(exclude_items=self._personas)
         elif now - self._persona_last_sync > self.PERSONA_STATE_TTL:
             LOG.warning(f'Persona state TTL expired, resetting personas config')
             self._personas = []
@@ -79,11 +80,14 @@ class PersonasProvider:
         response = send_mq_request(vhost=LLM_VHOST,
                                    request_data={"service_name": self.service_name},
                                    target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE)
-        self.personas = response.get('items', [])
-        for persona in self.personas:
-            persona.setdefault('name', persona.pop('persona_name', None))
-            persona = PersonaModel.parse_obj(obj=persona)
+        response_data = response.get('items', [])
+        personas = []
+        for item in response_data:
+            item.setdefault('name', item.pop('persona_name', None))
+            persona = PersonaModel.parse_obj(obj=item)
             self._persona_handlers_state.add_persona_handler(persona=persona)
+            personas.append(persona)
+        self.personas = personas
 
     def start_sync(self):
         self._fetch_persona_config()
