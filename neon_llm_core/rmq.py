@@ -31,8 +31,10 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from ovos_utils.log import LOG
 
-from neon_llm_core.config import load_config
+from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
+from neon_llm_core.utils.constants import LLM_VHOST
+from neon_llm_core.utils.personas.provider import PersonasProvider
 
 
 class NeonLLMMQConnector(MQConnector, ABC):
@@ -45,30 +47,13 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self.ovos_config = load_config()
         mq_config = self.ovos_config.get("MQ", dict())
         super().__init__(config=mq_config, service_name=self.service_name)
-        self.vhost = "/llm"
+        self.vhost = LLM_VHOST
 
         self.register_consumers()
         self._model = None
         self._bots = list()
-
-        if self.ovos_config.get("llm_bots", {}).get(self.name):
-            from neon_llm_core.chatbot import LLMBot
-            LOG.info(f"Chatbot(s) configured for: {self.name}")
-            for persona in self.ovos_config['llm_bots'][self.name]:
-                # Spawn a service for each persona to support @user requests
-                if not persona.get('enabled', True):
-                    LOG.warning(f"Persona disabled: {persona['name']}")
-                    continue
-                # Get a configured username to use for LLM submind connections
-                if mq_config.get("users", {}).get("neon_llm_submind"):
-                    self.ovos_config["MQ"]["users"][persona['name']] = \
-                        mq_config['users']['neon_llm_submind']
-                bot = LLMBot(llm_name=self.name, service_name=persona['name'],
-                             persona=persona, config=self.ovos_config,
-                             vhost="/chatbots")
-                bot.run()
-                LOG.info(f"Started chatbot: {bot.service_name}")
-                self._bots.append(bot)
+        self._personas_provider = PersonasProvider(service_name=self.name,
+                                                   ovos_config=self.ovos_config)
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
@@ -242,3 +227,15 @@ class NeonLLMMQConnector(MQConnector, ABC):
         @param answer: respondent's response to the question
         """
         pass
+
+    def run(self, run_consumers: bool = True, run_sync: bool = True,
+            run_observer: bool = True, **kwargs):
+        super().run(run_consumers=run_consumers,
+                    run_sync=run_sync,
+                    run_observer=run_observer,
+                    **kwargs)
+        self._personas_provider.start_sync()
+
+    def stop(self):
+        super().stop()
+        self._personas_provider.stop_sync()
