@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a2](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a2) (2024-03-22)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a1...0.1.1a2)
+
+**Merged pull requests:**
+
+- Synchronization with Klat Personas [\#5](https://github.com/NeonGeckoCom/neon-llm-core/pull/5) ([NeonKirill](https://github.com/NeonKirill))
+
 ## [0.1.1a1](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a1) (2023-12-21)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.0...0.1.1a1)
