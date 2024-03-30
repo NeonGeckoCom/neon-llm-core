@@ -84,5 +84,9 @@ class PersonaHandlersState:
         ignored_persona_ids = set(persona.id for persona in ignore_items or [])
         personas_to_remove = connected_personas - ignored_persona_ids
         for persona_id in personas_to_remove:
-            LOG.info(f'Removing persona_id = {persona_id}')
-            self._created_items.pop(persona_id, None)
+            self.remove_persona(persona_id=persona_id)
+
+    def remove_persona(self, persona_id: str):
+        LOG.info(f'Removing persona_id = {persona_id}')
+        self._created_items[persona_id].stop()
+        self._created_items.pop(persona_id, None)
