@@ -65,21 +65,26 @@ class PersonasProvider:
 
     @personas.setter
     def personas(self, data):
-        now = int(time())
         LOG.debug(f'Setting personas={data}')
-        if data and isinstance(data, list):
-            self._personas = data
-            self._persona_last_sync = now
-            self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
-        elif now - self._persona_last_sync > self.PERSONA_STATE_TTL:
+        if self._should_reset_personas(data=data):
             LOG.warning(f'Persona state TTL expired, resetting personas config')
             self._personas = []
             self._persona_handlers_state.init_default_handlers()
+        else:
+            self._personas = data
+        self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
+
+    def _should_reset_personas(self, data) -> bool:
+        return (not (self._persona_last_sync == 0 and data)
+                and int(time()) - self._persona_last_sync > self.PERSONA_STATE_TTL)
 
     def _fetch_persona_config(self):
         response = send_mq_request(vhost=LLM_VHOST,
                                    request_data={"service_name": self.service_name},
-                                   target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE)
+                                   target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE,
+                                   timeout=60)
+        if 'items' in response:
+            self._persona_last_sync = int(time())
         response_data = response.get('items', [])
         personas = []
         for item in response_data:
