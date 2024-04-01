@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a3](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a3) (2024-04-01)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a2...0.1.1a3)
+
+**Merged pull requests:**
+
+- Fixing issue with Persona Provider [\#6](https://github.com/NeonGeckoCom/neon-llm-core/pull/6) ([NeonKirill](https://github.com/NeonKirill))
+
 ## [0.1.1a2](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a2) (2024-03-22)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a1...0.1.1a2)
