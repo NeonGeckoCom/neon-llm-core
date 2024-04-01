@@ -42,7 +42,6 @@ class PersonaHandlersState:
         self.service_name = service_name
         self.ovos_config = ovos_config
         self.mq_config = ovos_config.get('MQ', {})
-        self.init_default_handlers()
 
     def init_default_handlers(self):
         self._created_items = {}
