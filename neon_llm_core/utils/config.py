@@ -32,7 +32,7 @@ from os.path import join, dirname, isfile
 from typing import Union
 
 from neon_utils.log_utils import init_log
-from ovos_utils.log import LOG
+from neon_utils.logger import LOG
 from ovos_config.config import Configuration
 
 from neon_llm_core.utils.constants import LLM_VHOST

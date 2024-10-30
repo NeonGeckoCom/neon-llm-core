@@ -29,7 +29,7 @@ from threading import Thread
 
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
-from ovos_utils.log import LOG
+from neon_utils.logger import LOG
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM

@@ -28,7 +28,7 @@ from time import time
 
 from neon_mq_connector.utils import RepeatingTimer
 from neon_mq_connector.utils.client_utils import send_mq_request
-from ovos_utils.log import LOG
+from neon_utils.logger import LOG
 
 from neon_llm_core.utils.constants import LLM_VHOST
 from neon_llm_core.utils.personas.models import PersonaModel
