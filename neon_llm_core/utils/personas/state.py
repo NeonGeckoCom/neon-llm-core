@@ -29,7 +29,7 @@
 import time
 from typing import Dict, Union, List
 
-from ovos_utils import LOG
+from neon_utils.logger import LOG
 
 from neon_llm_core.chatbot import LLMBot
 from neon_llm_core.utils.personas.models import PersonaModel
