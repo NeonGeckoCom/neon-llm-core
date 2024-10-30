@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a4](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a4) (2024-10-30)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a3...0.1.1a4)
+
+**Merged pull requests:**
+
+- injected dependency with sentry [\#7](https://github.com/NeonGeckoCom/neon-llm-core/pull/7) ([NeonKirill](https://github.com/NeonKirill))
+
 ## [0.1.1a3](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a3) (2024-04-01)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a2...0.1.1a3)
