@@ -171,6 +171,12 @@ class LLMBot(ChatBot):
         :param responses: list of answers to select from
         :returns response data from LLM API
         """
+        request_data = LLMVoteRequest(model=self.base_llm,
+                                      persona=self.persona,
+                                      query=prompt,
+                                      responses=responses,
+                                      history=[],
+                                      message_id="")
         queue = self.mq_queue_config.ask_appraiser_queue
 
         try:
