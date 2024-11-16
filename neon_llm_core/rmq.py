@@ -31,6 +31,9 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
+from neon_data_models.models.api.mq import (LLMProposeResponse,
+                                            LLMDiscussResponse, LLMVoteResponse)
+
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
 from neon_llm_core.utils.constants import LLM_VHOST
@@ -108,7 +111,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
     @create_mq_callback()
     def handle_request(self, body: dict):
         """
-        Handles ask requests from MQ to LLM
+        Handles ask requests (response to prompt) from MQ to LLM
         :param body: request body (dict)
         """
         # Handle this asynchronously so multiple subminds can be handled
@@ -131,20 +134,19 @@ class NeonLLMMQConnector(MQConnector, ABC):
             LOG.error(f'ValueError={err}')
             response = ('Sorry, but I cannot respond to your message at the '
                         'moment, please try again later')
-        api_response = {
-            "message_id": message_id,
-            "response": response
-        }
+        api_response = LLMProposeResponse(message_id=message_id,
+                                          response=response)
         LOG.info(f"Sending response: {response}")
-        self.send_message(request_data=api_response,
+        self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
         LOG.info(f"Handled ask request for message_id={message_id}")
 
+    # TODO: Refactor score and opinion to work async like request
     @create_mq_callback()
     def handle_score_request(self, body: dict):
         """
-            Handles score requests from MQ to LLM
-            :param body: request body (dict)
+        Handles score requests (vote) from MQ to LLM
+        :param body: request body (dict)
         """
         message_id = body["message_id"]
         routing_key = body["routing_key"]
@@ -162,19 +164,18 @@ class NeonLLMMQConnector(MQConnector, ABC):
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 sorted_answer_indexes = []
-        api_response = {
-            "message_id": message_id,
-            "sorted_answer_indexes": sorted_answer_indexes
-        }
-        self.send_message(request_data=api_response,
+
+        api_response = LLMVoteResponse(message_id=message_id,
+                                       sorted_answer_indexes=sorted_answer_indexes)
+        self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
         LOG.info(f"Handled score request for message_id={message_id}")
 
     @create_mq_callback()
     def handle_opinion_request(self, body: dict):
         """
-            Handles opinion requests from MQ to LLM
-            :param body: request body (dict)
+        Handles opinion requests (discuss) from MQ to LLM
+        :param body: request body (dict)
         """
         message_id = body["message_id"]
         routing_key = body["routing_key"]
@@ -200,12 +201,9 @@ class NeonLLMMQConnector(MQConnector, ABC):
                 opinion = ("Sorry, but I experienced an issue trying to form "
                            "an opinion on this topic")
 
-        api_response = {
-            "message_id": message_id,
-            "opinion": opinion
-        }
-
-        self.send_message(request_data=api_response,
+        api_response = LLMDiscussResponse(message_id=message_id,
+                                          opinion=opinion)
+        self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
         LOG.info(f"Handled ask request for message_id={message_id}")
 

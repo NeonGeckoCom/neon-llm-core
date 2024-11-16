@@ -26,8 +26,11 @@
 
 from typing import List
 from chatbot_core.v2 import ChatBot
+from neon_data_models.models.api.mq import (LLMProposeRequest,
+                                            LLMDiscussRequest, LLMVoteRequest)
 from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
+from neon_data_models.models.api.llm import LLMPersona
 
 from neon_llm_core.utils.config import LLMMQConfig
 
@@ -37,8 +40,10 @@ class LLMBot(ChatBot):
     def __init__(self, *args, **kwargs):
         ChatBot.__init__(self, *args, **kwargs)
         self.bot_type = "submind"
-        self.base_llm = kwargs.get("llm_name")  # chatgpt, fastchat, etc.
-        self.persona = kwargs.get("persona")
+        self.base_llm = kwargs["llm_name"]  # chatgpt, fastchat, etc.
+        self.persona = kwargs["persona"]
+        self.persona = LLMPersona(**self.persona) if \
+            isinstance(self.persona, dict) else self.persona
         self.mq_queue_config = self.get_llm_mq_config(self.base_llm)
         LOG.info(f'Initialised config for llm={self.base_llm}|'
                  f'persona={self._bot_id}')
@@ -86,6 +91,7 @@ class LLMBot(ChatBot):
         :param context: message context
         """
         if options:
+            # Remove self answer from available options
             options = {k: v for k, v in options.items()
                        if k != self.service_name}
             bots = list(options)
@@ -109,10 +115,13 @@ class LLMBot(ChatBot):
         queue = self.mq_queue_config.ask_response_queue
         LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
         try:
+            request_data = LLMProposeRequest(model=self.base_llm,
+                                             persona=self.persona,
+                                             query=shout,
+                                             history=[],
+                                             message_id="")
             return send_mq_request(vhost=self.mq_queue_config.vhost,
-                                   request_data={"query": shout,
-                                                 "history": [],
-                                                 "persona": self.persona},
+                                   request_data=request_data.model_dump(),
                                    target_queue=queue,
                                    response_queue=f"{queue}.response")
         except Exception as e:
@@ -124,16 +133,20 @@ class LLMBot(ChatBot):
 
     def _get_llm_api_opinion(self, prompt: str, options: dict) -> dict:
         """
-        Requests LLM API for opinion on provided submind responses
+        Requests LLM API for discussion of provided submind responses
         :param prompt: incoming prompt text
         :param options: proposed responses (botname: response)
         :returns response data from LLM API
         """
         queue = self.mq_queue_config.ask_discusser_queue
+        request_data = LLMDiscussRequest(model=self.base_llm,
+                                         persona=self.persona,
+                                         query=prompt,
+                                         options=options,
+                                         history=[],
+                                         message_id="")
         return send_mq_request(vhost=self.mq_queue_config.vhost,
-                               request_data={"query": prompt,
-                                             "options": options,
-                                             "persona": self.persona},
+                               request_data=request_data.model_dump(),
                                target_queue=queue,
                                response_queue=f"{queue}.response")
 
@@ -144,11 +157,15 @@ class LLMBot(ChatBot):
         :param responses: list of answers to select from
         :returns response data from LLM API
         """
+        request_data = LLMVoteRequest(model=self.base_llm,
+                                      persona=self.persona,
+                                      query=prompt,
+                                      responses=responses,
+                                      history=[],
+                                      message_id="")
         queue = self.mq_queue_config.ask_appraiser_queue
         return send_mq_request(vhost=self.mq_queue_config.vhost,
-                               request_data={"query": prompt,
-                                             "responses": responses,
-                                             "persona": self.persona},
+                               request_data=request_data.model_dump(),
                                target_queue=queue,
                                response_queue=f"{queue}.response")
 

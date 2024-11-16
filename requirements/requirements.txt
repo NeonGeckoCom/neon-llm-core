@@ -2,4 +2,5 @@
 neon-mq-connector>=0.7.2a8
 neon_utils[sentry]==1.11.1a5
 ovos-config~=0.0.10
-pydantic==2.6.3
+pydantic~=2.6
+neon-data-models@git+https://github.com/neongeckocom/neon-data-models@FEAT_LLMRequestModels

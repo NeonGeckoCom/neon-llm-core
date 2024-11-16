@@ -23,21 +23,5 @@
 # LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-from typing import Optional
 
-from pydantic import BaseModel, computed_field
-
-
-class PersonaModel(BaseModel):
-    name: str
-    description: str
-    enabled: bool = True
-    user_id: Optional[str] = None
-
-    @computed_field
-    @property
-    def id(self) -> str:
-        persona_id = self.name
-        if self.user_id:
-            persona_id += f"_{self.user_id}"
-        return persona_id
+from neon_data_models.models.api.llm import LLMPersona as PersonaModel
