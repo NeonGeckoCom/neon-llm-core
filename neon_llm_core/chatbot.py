@@ -63,7 +63,7 @@ class LLMBot(ChatBot):
         :param timestamp: formatted timestamp of shout
         :param context: message context
         """
-        prompt_id = context.get('prompt_id')
+        prompt_id = context.get('prompt_id') if context else None
         if prompt_id:
             self.prompt_id_to_shout[prompt_id] = shout
         LOG.debug(f"Getting response to {shout}")
@@ -78,7 +78,10 @@ class LLMBot(ChatBot):
         :param context: message context
         """
         options = {k: v for k, v in options.items() if k != self.service_name}
-        prompt_sentence = self.prompt_id_to_shout.get(context['prompt_id'], '')
+        prompt_id = context.get('prompt_id') if context else None
+        prompt_sentence = None
+        if prompt_id:
+            prompt_sentence = self.prompt_id_to_shout.get(prompt_id)
         LOG.info(f'prompt_sentence={prompt_sentence}, options={options}')
         opinion = self._get_llm_api_opinion(prompt=prompt_sentence,
                                             options=options)
@@ -90,15 +93,21 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :param context: message context
         """
+        # Determine the relevant prompt
+        prompt_id = context.get('prompt_id') if context else None
+        prompt_sentence = None
+        if prompt_id:
+            prompt_sentence = self.prompt_id_to_shout.get(prompt_id)
+
+        # Remove self answer from available options
+        options = {k: v for k, v in options.items()
+                   if k != self.service_name}
+
         if options:
-            # Remove self answer from available options
-            options = {k: v for k, v in options.items()
-                       if k != self.service_name}
             bots = list(options)
             bot_responses = list(options.values())
             LOG.info(f'bots={bots}, answers={bot_responses}')
-            prompt = self.prompt_id_to_shout.pop(context['prompt_id'], '')
-            answer_data = self._get_llm_api_choice(prompt=prompt,
+            answer_data = self._get_llm_api_choice(prompt=prompt_sentence,
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
             if answer_data and answer_data.sorted_answer_indexes:
@@ -108,7 +117,7 @@ class LLMBot(ChatBot):
     def _get_llm_api_response(self, shout: str) -> Optional[LLMProposeResponse]:
         """
         Requests LLM API for response on provided shout
-        :param shout: provided should string
+        :param shout: Input prompt to respond to
         :returns response from LLM API
         """
         queue = self.mq_queue_config.ask_response_queue
