@@ -42,6 +42,10 @@ class MockChatbot(LLMBot):
 class TestChatbot(TestCase):
     mock_chatbot = MockChatbot()
 
+    @classmethod
+    def tearDownClass(cls):
+        cls.mock_chatbot.shutdown()
+
     def test_00_init(self):
         self.assertEqual(self.mock_chatbot.bot_type, "submind")
         self.assertIsInstance(self.mock_chatbot.base_llm, str)
