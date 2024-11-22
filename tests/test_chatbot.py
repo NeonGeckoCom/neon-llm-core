@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2021 NeonGecko.com Inc.
+# Copyright 2008-2024 NeonGecko.com Inc.
 # BSD-3
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,5 +24,50 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from neon_data_models.models.api.llm import LLMPersona as PersonaModel
-# TODO: Mark for deprecation
+from unittest import TestCase
+
+from neon_data_models.models.api import LLMPersona
+
+from neon_llm_core.chatbot import LLMBot
+from neon_llm_core.utils.config import LLMMQConfig
+
+
+class MockChatbot(LLMBot):
+    def __init__(self):
+        LLMBot.__init__(self, llm_name="mock_chatbot",
+                        persona={"name": "test_persona",
+                                 "system_prompt": "Test Prompt"})
+
+
+class TestChatbot(TestCase):
+    mock_chatbot = MockChatbot()
+
+    def test_00_init(self):
+        self.assertEqual(self.mock_chatbot.bot_type, "submind")
+        self.assertIsInstance(self.mock_chatbot.base_llm, str)
+        self.assertIsInstance(self.mock_chatbot.persona, LLMPersona)
+        self.assertIsInstance(self.mock_chatbot.mq_queue_config, LLMMQConfig)
+
+    def test_ask_chatbot(self):
+        # TODO
+        pass
+
+    def test_ask_discusser(self):
+        # TODO
+        pass
+
+    def test_ask_appraiser(self):
+        # TODO
+        pass
+
+    def test_get_llm_api_response(self):
+        # TODO
+        pass
+
+    def test_get_llm_api_opinion(self):
+        # TODO
+        pass
+
+    def test_get_llm_api_choice(self):
+        # TODO
+        pass
