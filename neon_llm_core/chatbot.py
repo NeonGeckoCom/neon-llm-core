@@ -24,10 +24,11 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from typing import List
+from typing import List, Optional
 from chatbot_core.v2 import ChatBot
 from neon_data_models.models.api.mq import (LLMProposeRequest,
-                                            LLMDiscussRequest, LLMVoteRequest)
+                                            LLMDiscussRequest, LLMVoteRequest, LLMProposeResponse, LLMDiscussResponse,
+                                            LLMVoteResponse)
 from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
 from neon_data_models.models.api.llm import LLMPersona
@@ -66,9 +67,8 @@ class LLMBot(ChatBot):
         if prompt_id:
             self.prompt_id_to_shout[prompt_id] = shout
         LOG.debug(f"Getting response to {shout}")
-        response = self._get_llm_api_response(
-            shout=shout).get("response", "I have nothing to say here...")
-        return response
+        response = self._get_llm_api_response(shout=shout)
+        return response.response if response else "I have nothing to say here..."
 
     def ask_discusser(self, options: dict, context: dict = None) -> str:
         """
@@ -81,8 +81,8 @@ class LLMBot(ChatBot):
         prompt_sentence = self.prompt_id_to_shout.get(context['prompt_id'], '')
         LOG.info(f'prompt_sentence={prompt_sentence}, options={options}')
         opinion = self._get_llm_api_opinion(prompt=prompt_sentence,
-                                            options=options).get('opinion', '')
-        return opinion
+                                            options=options)
+        return opinion.opinion if opinion else "I have nothing to say here..."
 
     def ask_appraiser(self, options: dict, context: dict = None) -> str:
         """
@@ -101,16 +101,15 @@ class LLMBot(ChatBot):
             answer_data = self._get_llm_api_choice(prompt=prompt,
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
-            sorted_answer_indexes = answer_data.get('sorted_answer_indexes')
-            if sorted_answer_indexes:
-                return bots[sorted_answer_indexes[0]]
+            if answer_data and answer_data.sorted_answer_indexes:
+                return bots[answer_data.sorted_answer_indexes[0]]
         return "abstain"
 
-    def _get_llm_api_response(self, shout: str) -> dict:
+    def _get_llm_api_response(self, shout: str) -> Optional[LLMProposeResponse]:
         """
         Requests LLM API for response on provided shout
         :param shout: provided should string
-        :returns response string from LLM API
+        :returns response from LLM API
         """
         queue = self.mq_queue_config.ask_response_queue
         LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
@@ -120,18 +119,17 @@ class LLMBot(ChatBot):
                                              query=shout,
                                              history=[],
                                              message_id="")
-            return send_mq_request(vhost=self.mq_queue_config.vhost,
-                                   request_data=request_data.model_dump(),
-                                   target_queue=queue,
-                                   response_queue=f"{queue}.response")
+            resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
+                                        request_data=request_data.model_dump(),
+                                        target_queue=queue,
+                                        response_queue=f"{queue}.response")
+            return LLMProposeResponse(**resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
-                          f"{self.mq_queue_config.vhost}/"
-                          f"{self.mq_queue_config.ask_response_queue}: "
-                          f"{e}")
-            return dict()
+                          f"{self.mq_queue_config.vhost}/{queue}: {e}")
 
-    def _get_llm_api_opinion(self, prompt: str, options: dict) -> dict:
+    def _get_llm_api_opinion(self, prompt: str,
+                             options: dict) -> Optional[LLMDiscussResponse]:
         """
         Requests LLM API for discussion of provided submind responses
         :param prompt: incoming prompt text
@@ -139,35 +137,47 @@ class LLMBot(ChatBot):
         :returns response data from LLM API
         """
         queue = self.mq_queue_config.ask_discusser_queue
-        request_data = LLMDiscussRequest(model=self.base_llm,
-                                         persona=self.persona,
-                                         query=prompt,
-                                         options=options,
-                                         history=[],
-                                         message_id="")
-        return send_mq_request(vhost=self.mq_queue_config.vhost,
-                               request_data=request_data.model_dump(),
-                               target_queue=queue,
-                               response_queue=f"{queue}.response")
+        try:
+            request_data = LLMDiscussRequest(model=self.base_llm,
+                                             persona=self.persona,
+                                             query=prompt,
+                                             options=options,
+                                             history=[],
+                                             message_id="")
+            resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
+                                        request_data=request_data.model_dump(),
+                                        target_queue=queue,
+                                        response_queue=f"{queue}.response")
+            return LLMDiscussResponse(**resp_data)
+        except Exception as e:
+            LOG.exception(f"Failed to get response on "
+                          f"{self.mq_queue_config.vhost}/{queue}: {e}")
 
-    def _get_llm_api_choice(self, prompt: str, responses: List[str]) -> dict:
+    def _get_llm_api_choice(self, prompt: str,
+                            responses: List[str]) -> Optional[LLMVoteResponse]:
         """
         Requests LLM API for choice among provided message list
         :param prompt: incoming prompt text
         :param responses: list of answers to select from
         :returns response data from LLM API
         """
-        request_data = LLMVoteRequest(model=self.base_llm,
-                                      persona=self.persona,
-                                      query=prompt,
-                                      responses=responses,
-                                      history=[],
-                                      message_id="")
         queue = self.mq_queue_config.ask_appraiser_queue
-        return send_mq_request(vhost=self.mq_queue_config.vhost,
-                               request_data=request_data.model_dump(),
-                               target_queue=queue,
-                               response_queue=f"{queue}.response")
+
+        try:
+            request_data = LLMVoteRequest(model=self.base_llm,
+                                          persona=self.persona,
+                                          query=prompt,
+                                          responses=responses,
+                                          history=[],
+                                          message_id="")
+            resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
+                                        request_data=request_data.model_dump(),
+                                        target_queue=queue,
+                                        response_queue=f"{queue}.response")
+            return LLMVoteResponse(**resp_data)
+        except Exception as e:
+            LOG.exception(f"Failed to get response on "
+                          f"{self.mq_queue_config.vhost}/{queue}: {e}")
 
     @staticmethod
     def get_llm_mq_config(llm_name: str) -> LLMMQConfig:

@@ -25,8 +25,11 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from unittest import TestCase
+from unittest.mock import patch
 
-from neon_data_models.models.api import LLMPersona
+from neon_data_models.models.api import LLMPersona, LLMProposeRequest, LLMProposeResponse, LLMDiscussRequest, \
+    LLMDiscussResponse, LLMVoteRequest, LLMVoteResponse
+from pydantic import ValidationError
 
 from neon_llm_core.chatbot import LLMBot
 from neon_llm_core.utils.config import LLMMQConfig
@@ -64,14 +67,84 @@ class TestChatbot(TestCase):
         # TODO
         pass
 
-    def test_get_llm_api_response(self):
-        # TODO
-        pass
+    @patch('neon_llm_core.chatbot.send_mq_request')
+    def test_get_llm_api_response(self, mq_request):
+        mq_request.return_value = {"response": "test",
+                                   "message_id": ""}
 
-    def test_get_llm_api_opinion(self):
-        # TODO
-        pass
+        # Valid Request
+        resp = self.mock_chatbot._get_llm_api_response("input")
+        request_data = mq_request.call_args.kwargs['request_data']
+        req = LLMProposeRequest(**request_data)
+        self.assertIsInstance(req, LLMProposeRequest)
+        self.assertEqual(req.query, "input")
+        self.assertEqual(req.model, self.mock_chatbot.base_llm)
+        self.assertEqual(req.persona, self.mock_chatbot.persona)
+        self.assertIsInstance(resp, LLMProposeResponse)
+        self.assertEqual(resp.response, mq_request.return_value['response'])
 
-    def test_get_llm_api_choice(self):
-        # TODO
-        pass
+        # Invalid request
+        self.assertIsNone(self.mock_chatbot._get_llm_api_response(None))
+
+        # Invalid response
+        mq_request.return_value = {}
+        self.assertIsNone(self.mock_chatbot._get_llm_api_response("input"))
+
+    @patch('neon_llm_core.chatbot.send_mq_request')
+    def test_get_llm_api_opinion(self, mq_request):
+        mq_request.return_value = {"opinion": "test",
+                                   "message_id": ""}
+        prompt = "test prompt"
+        options = {"bot 1": "resp 1", "bot 2": "resp 2"}
+
+        # Valid Request
+        resp = self.mock_chatbot._get_llm_api_opinion(prompt, options)
+        request_data = mq_request.call_args.kwargs['request_data']
+        req = LLMDiscussRequest(**request_data)
+        self.assertIsInstance(req, LLMDiscussRequest)
+        self.assertEqual(req.query, prompt)
+        self.assertEqual(req.options, options)
+        self.assertEqual(req.model, self.mock_chatbot.base_llm)
+        self.assertEqual(req.persona, self.mock_chatbot.persona)
+        self.assertIsInstance(resp, LLMDiscussResponse)
+        self.assertEqual(resp.opinion, mq_request.return_value['opinion'])
+
+        # Invalid request
+        self.assertIsNone(self.mock_chatbot._get_llm_api_opinion(prompt,
+                                                                 prompt))
+
+        # Invalid response
+        mq_request.return_value = {}
+        self.assertIsNone(self.mock_chatbot._get_llm_api_opinion(prompt,
+                                                                 options))
+
+    @patch('neon_llm_core.chatbot.send_mq_request')
+    def test_get_llm_api_choice(self, mq_request):
+        mq_request.return_value = {"sorted_answer_indexes": [2, 0, 1],
+                                   "message_id": ""}
+        prompt = "test prompt"
+        responses = ["one", "two", "three"]
+
+        # Valid Request
+        resp = self.mock_chatbot._get_llm_api_choice(prompt, responses)
+        request_data = mq_request.call_args.kwargs['request_data']
+
+        req = LLMVoteRequest(**request_data)
+        self.assertIsInstance(req, LLMVoteRequest)
+        self.assertEqual(req.query, prompt)
+        self.assertEqual(req.responses, responses)
+        self.assertEqual(req.model, self.mock_chatbot.base_llm)
+        self.assertEqual(req.persona, self.mock_chatbot.persona)
+        self.assertIsInstance(resp, LLMVoteResponse)
+        self.assertEqual(resp.sorted_answer_indexes,
+                         mq_request.return_value['sorted_answer_indexes'])
+
+        # Invalid request
+        self.assertIsNone(self.mock_chatbot._get_llm_api_choice(prompt,
+                                                                [1, 2, 3]))
+
+        # Invalid response
+        mq_request.return_value["sorted_answer_indexes"] = ["one", "two",
+                                                            "three"]
+        self.assertIsNone(self.mock_chatbot._get_llm_api_choice(prompt,
+                                                                responses))
