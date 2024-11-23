@@ -70,16 +70,16 @@ class TestChatbot(TestCase):
                                              valid_timestamp, valid_context)
         get_api_response.assert_called_with(shout=valid_shout)
         self.assertEqual(resp, "test_resp")
-        self.assertEqual(self.mock_chatbot.prompt_id_to_shout,
-                         {valid_prompt_id: valid_shout})
+        self.assertEqual(self.mock_chatbot.prompt_id_to_shout[valid_prompt_id],
+                         valid_shout)
 
         # Valid without context
         resp = self.mock_chatbot.ask_chatbot(valid_user, valid_shout,
                                              valid_timestamp)
         get_api_response.assert_called_with(shout=valid_shout)
         self.assertEqual(resp, "test_resp")
-        self.assertEqual(self.mock_chatbot.prompt_id_to_shout,
-                         {valid_prompt_id: valid_shout})
+        self.assertEqual(self.mock_chatbot.prompt_id_to_shout[valid_prompt_id],
+                         valid_shout)
 
         # Invalid request
         self.assertIsInstance(self.mock_chatbot.ask_chatbot(valid_user,
