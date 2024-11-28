@@ -20,8 +20,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install apt dependencies
         run: |
-          apt update
-          apt install -y rabbitmq-server
+          sudo apt update
+          sudo apt install -y rabbitmq-server
       - name: Install package
         run: |
           python -m pip install --upgrade pip
