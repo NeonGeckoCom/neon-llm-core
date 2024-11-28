@@ -102,9 +102,11 @@ def rmq_instance(request, tmp_path_factory):
     rabbit_executor.start()
 
     # Init RMQ config
-    rabbit_executor.rabbitctl_output("add_user", "test_llm_user", "test_llm_password")
+    rabbit_executor.rabbitctl_output("add_user", "test_llm_user",
+                                     "test_llm_password")
     rabbit_executor.rabbitctl_output("add_vhost", "/llm")
-    rabbit_executor.rabbitctl_output("set_permissions_globally", "test_llm_user", ".*", ".*", ".*")
+    rabbit_executor.rabbitctl_output("set_permissions", "-p", "/llm",
+                                     "test_llm_user", ".*", ".*", ".*")
     request.cls.rmq_instance = rabbit_executor
 
 
