@@ -26,6 +26,7 @@
 
 from abc import abstractmethod, ABC
 from threading import Thread
+from typing import Optional
 
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
@@ -47,10 +48,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
     async_consumers_enabled = True
 
-    def __init__(self):
+    def __init__(self, config: Optional[dict] = None):
         self.service_name = f'neon_llm_{self.name}'
 
-        self.ovos_config = load_config()
+        self.ovos_config = config or load_config()
         mq_config = self.ovos_config.get("MQ", dict())
         super().__init__(config=mq_config, service_name=self.service_name)
         self.vhost = LLM_VHOST
