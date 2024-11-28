@@ -39,8 +39,8 @@ from neon_llm_core.rmq import NeonLLMMQConnector
 
 
 class NeonMockLlm(NeonLLMMQConnector):
-    def __init__(self):
-        config = {"MQ": {"server": "127.0.0.1", "port": 25672,
+    def __init__(self, rmq_port: int):
+        config = {"MQ": {"server": "127.0.0.1", "port": rmq_port,
                          "users": {
                              "mq_handler": {"user": "neon_api_utils",
                                             "password": "Klatchat2021"},
@@ -69,7 +69,7 @@ def rmq_instance(request, tmp_path_factory):
     rabbit_ctl = config["ctl"]
     rabbit_server = config["server"]
     rabbit_host = "127.0.0.1"
-    rabbit_port = 25672
+    rabbit_port = get_port(config["port"])
     rabbit_distribution_port = get_port(
         config["distribution_port"], [rabbit_port]
     )
@@ -105,7 +105,6 @@ def rmq_instance(request, tmp_path_factory):
     rabbit_executor.rabbitctl_output("add_user", "test_llm_user", "test_llm_password")
     rabbit_executor.rabbitctl_output("add_vhost", "/llm")
     rabbit_executor.rabbitctl_output("set_permissions_globally", "test_llm_user", ".*", ".*", ".*")
-
     request.cls.rmq_instance = rabbit_executor
 
 
@@ -120,7 +119,7 @@ class TestNeonLLMMQConnector(TestCase):
             pass
 
     def test_00_init(self):
-        self.mq_llm = NeonMockLlm()
+        self.mq_llm = NeonMockLlm(self.rmq_instance.port)
 
         self.assertIn(self.mq_llm.name, self.mq_llm.service_name)
         self.assertIsInstance(self.mq_llm.ovos_config, dict)
