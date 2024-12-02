@@ -30,6 +30,7 @@ from unittest import TestCase
 from unittest.mock import Mock
 
 from mirakuru import ProcessExitedWithError
+from neon_mq_connector.utils.network_utils import dict_to_b64
 from port_for import get_port
 from pytest_rabbitmq.factories.executor import RabbitMqExecutor
 from pytest_rabbitmq.factories.process import get_config
@@ -47,6 +48,11 @@ class NeonMockLlm(NeonLLMMQConnector):
                              "neon_llm_mock_mq": {"user": "test_llm_user",
                                                   "password": "test_llm_password"}}}}
         NeonLLMMQConnector.__init__(self, config=config)
+        self._model = Mock()
+        self._model.ask.return_value = "Mock response"
+        self._model.get_sorted_answer_indexes.return_value = [0, 1]
+        self.send_message = Mock()
+        self._compose_opinion_prompt = Mock(return_value="Mock opinion prompt")
 
     @property
     def name(self):
@@ -54,13 +60,12 @@ class NeonMockLlm(NeonLLMMQConnector):
 
     @property
     def model(self) -> NeonLLM:
-        return Mock()
+        return self._model
 
-    @staticmethod
-    def compose_opinion_prompt(respondent_nick: str,
+    def compose_opinion_prompt(self, respondent_nick: str,
                                question: str,
                                answer: str) -> str:
-        return "opinion prompt"
+        return self._compose_opinion_prompt(respondent_nick, question, answer)
 
 
 @pytest.fixture(scope="class")
@@ -112,6 +117,8 @@ def rmq_instance(request, tmp_path_factory):
 
 @pytest.mark.usefixtures("rmq_instance")
 class TestNeonLLMMQConnector(TestCase):
+    mq_llm: NeonMockLlm = None
+    rmq_instance: RabbitMqExecutor = None
 
     @classmethod
     def tearDownClass(cls):
@@ -120,12 +127,115 @@ class TestNeonLLMMQConnector(TestCase):
         except ProcessExitedWithError:
             pass
 
-    def test_00_init(self):
-        self.mq_llm = NeonMockLlm(self.rmq_instance.port)
+    def setUp(self):
+        if self.mq_llm is None:
+            self.mq_llm = NeonMockLlm(self.rmq_instance.port)
 
+    def test_00_init(self):
         self.assertIn(self.mq_llm.name, self.mq_llm.service_name)
         self.assertIsInstance(self.mq_llm.ovos_config, dict)
         self.assertEqual(self.mq_llm.vhost, "/llm")
-        self.assertIsNotNone(self.mq_llm.model)
+        self.assertIsNotNone(self.mq_llm.model, self.mq_llm.model)
         self.assertEqual(self.mq_llm._personas_provider.service_name,
                          self.mq_llm.name)
+
+    def test_handle_request(self):
+        from neon_data_models.models.api.mq import (LLMProposeRequest,
+                                                    LLMProposeResponse)
+        # Valid Request
+        request = LLMProposeRequest(message_id="mock_message_id",
+                                    routing_key="mock_routing_key",
+                                    query="Mock Query", history=[])
+        self.mq_llm.handle_request(None, None, None,
+                                   dict_to_b64(request.model_dump())).join()
+        self.mq_llm.model.ask.assert_called_with(message=request.query,
+                                                 chat_history=request.history,
+                                                 persona=request.persona)
+        response = self.mq_llm.send_message.call_args.kwargs
+        self.assertEqual(response['queue'], request.routing_key)
+        response = LLMProposeResponse(**response['request_data'])
+        self.assertIsInstance(response, LLMProposeResponse)
+        self.assertEqual(request.routing_key, response.routing_key)
+        self.assertEqual(request.message_id, response.message_id)
+
+        self.assertEqual(response.response, self.mq_llm.model.ask())
+
+    def test_handle_opinion_request(self):
+        from neon_data_models.models.api.mq import (LLMDiscussRequest,
+                                                    LLMDiscussResponse)
+        # Valid Request
+        request = LLMDiscussRequest(message_id="mock_message_id",
+                                    routing_key="mock_routing_key",
+                                    query="Mock Discuss", history=[],
+                                    options={"bot 1": "resp 1",
+                                             "bot 2": "resp 2"})
+        self.mq_llm.handle_opinion_request(None, None, None,
+                                           dict_to_b64(request.model_dump()))
+
+        self.mq_llm._compose_opinion_prompt.assert_called_with(
+            list(request.options.keys())[0], request.query,
+            list(request.options.values())[0])
+
+        response = self.mq_llm.send_message.call_args.kwargs
+        self.assertEqual(response['queue'], request.routing_key)
+        response = LLMDiscussResponse(**response['request_data'])
+        self.assertIsInstance(response, LLMDiscussResponse)
+        self.assertEqual(request.routing_key, response.routing_key)
+        self.assertEqual(request.message_id, response.message_id)
+
+        self.assertEqual(response.opinion, self.mq_llm.model.ask())
+
+        # No input options
+        request = LLMDiscussRequest(message_id="mock_message_id1",
+                                    routing_key="mock_routing_key1",
+                                    query="Mock Discuss 1", history=[],
+                                    options={})
+        self.mq_llm.handle_opinion_request(None, None, None,
+                                           dict_to_b64(request.model_dump()))
+        response = self.mq_llm.send_message.call_args.kwargs
+        self.assertEqual(response['queue'], request.routing_key)
+        response = LLMDiscussResponse(**response['request_data'])
+        self.assertIsInstance(response, LLMDiscussResponse)
+        self.assertEqual(request.routing_key, response.routing_key)
+        self.assertEqual(request.message_id, response.message_id)
+        self.assertNotEqual(response.opinion, self.mq_llm.model.ask())
+
+        # TODO: Test with invalid sorted answer indexes
+
+    def test_handle_score_request(self):
+        from neon_data_models.models.api.mq import (LLMVoteRequest,
+                                                    LLMVoteResponse)
+
+        # Valid Request
+        request = LLMVoteRequest(message_id="mock_message_id",
+                                 routing_key="mock_routing_key",
+                                 query="Mock Score", history=[],
+                                 responses=["one", "two"])
+        self.mq_llm.handle_score_request(None, None, None,
+                                         dict_to_b64(request.model_dump()))
+
+        response = self.mq_llm.send_message.call_args.kwargs
+        self.assertEqual(response['queue'], request.routing_key)
+        response = LLMVoteResponse(**response['request_data'])
+        self.assertIsInstance(response, LLMVoteResponse)
+        self.assertEqual(request.routing_key, response.routing_key)
+        self.assertEqual(request.message_id, response.message_id)
+
+        self.assertEqual(response.sorted_answer_indexes,
+                         self.mq_llm.model.get_sorted_answer_indexes())
+
+        # No response options
+        request = LLMVoteRequest(message_id="mock_message_id",
+                                 routing_key="mock_routing_key",
+                                 query="Mock Score", history=[], responses=[])
+        self.mq_llm.handle_score_request(None, None, None,
+                                         dict_to_b64(request.model_dump()))
+
+        response = self.mq_llm.send_message.call_args.kwargs
+        self.assertEqual(response['queue'], request.routing_key)
+        response = LLMVoteResponse(**response['request_data'])
+        self.assertIsInstance(response, LLMVoteResponse)
+        self.assertEqual(request.routing_key, response.routing_key)
+        self.assertEqual(request.message_id, response.message_id)
+
+        self.assertEqual(response.sorted_answer_indexes, [])
