@@ -27,7 +27,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
-from typing import Dict, Union, List
+from typing import Dict, List, Optional
 
 from neon_utils.logger import LOG
 
@@ -36,6 +36,10 @@ from neon_llm_core.utils.personas.models import PersonaModel
 
 
 class PersonaHandlersState:
+    """
+    This works with the PersonasProvider object to manage LLMBot instances for
+    all configured personas.
+    """
 
     def __init__(self, service_name: str, ovos_config: dict):
         self._created_items: Dict[str, LLMBot] = {}
@@ -44,17 +48,29 @@ class PersonaHandlersState:
         self.mq_config = ovos_config.get('MQ', {})
 
     def init_default_handlers(self):
+        """
+        Initializes LLMBot instances for all personas defined in configuration.
+        """
         self._created_items = {}
         if self.ovos_config.get("llm_bots", {}).get(self.service_name):
             LOG.info(f"Chatbot(s) configured for: {self.service_name}")
             for persona in self.ovos_config['llm_bots'][self.service_name]:
-                self.add_persona_handler(persona=PersonaModel.parse_obj(obj=persona))
+                self.add_persona_handler(
+                    persona=PersonaModel.parse_obj(obj=persona))
 
-    def add_persona_handler(self, persona: PersonaModel) -> Union[LLMBot, None]:
+    def add_persona_handler(self, persona: PersonaModel) -> Optional[LLMBot]:
+        """
+        Creates an `LLMBot` instance for the given persona if the persona does
+        not yet exist AND the persona is not disabled in configuration.
+        :param persona: Persona definition to generate an LLMBot instance of
+        :return: New or existing LLMBot instance or None if the persona is
+                 disabled
+        """
         persona_dict = persona.model_dump()
         if persona.id in list(self._created_items):
             if self._created_items[persona.id].persona != persona_dict:
-                LOG.warning(f"Overriding already existing persona: '{persona.id}' with new data={persona}")
+                LOG.warning(f"Overriding already existing persona: "
+                            f"'{persona.id}' with new data={persona}")
                 try:
                     self._created_items[persona.id].stop()
                     # time to gracefully stop the submind

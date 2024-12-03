@@ -79,6 +79,11 @@ class NeonLLMMQConnector(MQConnector, ABC):
                                queue=self.queue_opinion,
                                callback=self.handle_opinion_request,
                                on_error=self.default_error_handler,)
+        self.register_consumer(name=f'neon_llm_{self.name}_personas',
+                               vhost=self.vhost,
+                               queue=self.queue_personas,
+                               callback=self.handle_new_personas,
+                               on_error=self.default_error_handler)
     
     @property
     @abstractmethod
@@ -105,6 +110,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
         return f"{self.name}_discussion_input"
 
     @property
+    def queue_personas(self):
+        return f"{self.name}_personas_input"
+
+    @property
     @abstractmethod
     def model(self) -> NeonLLM:
         pass
@@ -121,6 +130,15 @@ class NeonLLMMQConnector(MQConnector, ABC):
                    daemon=True)
         t.start()
         return t
+
+    @create_mq_callback()
+    def handle_new_personas(self, body: dict):
+        """
+        Handles an emitted message from the server containing personas defined
+        for this LLM
+        :param body: MQ message body containing persona definitions
+        """
+        self._personas_provider.parse_persona_response(body)
 
     def _handle_request_async(self, request: dict):
         message_id = request["message_id"]

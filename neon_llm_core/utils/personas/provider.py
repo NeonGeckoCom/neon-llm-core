@@ -25,6 +25,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 from time import time
+from typing import List
 
 from neon_mq_connector.utils import RepeatingTimer
 from neon_mq_connector.utils.client_utils import send_mq_request
@@ -36,9 +37,13 @@ from neon_llm_core.utils.personas.state import PersonaHandlersState
 
 
 class PersonasProvider:
+    """
+    Manages personas defined via Klat. Each LLM that connects to the MQ bus will
+    include an instance of this object to track changes to personas.
+    """
 
     PERSONA_STATE_TTL = int(os.getenv("PERSONA_STATE_TTL", 15 * 60))
-    PERSONA_SYNC_INTERVAL = int(os.getenv("PERSONA_SYNC_INTERVAL", 5 * 60))
+    PERSONA_SYNC_INTERVAL = int(os.getenv("PERSONA_SYNC_INTERVAL", 0))
     GET_CONFIGURED_PERSONAS_QUEUE = "get_configured_personas"
 
     def __init__(self, service_name: str, ovos_config: dict):
@@ -50,7 +55,7 @@ class PersonasProvider:
         self._persona_sync_thread = None
 
     @property
-    def persona_sync_thread(self):
+    def persona_sync_thread(self) -> RepeatingTimer:
         """Creates new synchronization thread which fetches Klat personas"""
         if not (isinstance(self._persona_sync_thread, RepeatingTimer) and
                 self._persona_sync_thread.is_alive()):
@@ -60,11 +65,11 @@ class PersonasProvider:
         return self._persona_sync_thread
 
     @property
-    def personas(self):
+    def personas(self) -> List[PersonaModel]:
         return self._personas
 
     @personas.setter
-    def personas(self, data):
+    def personas(self, data: List[PersonaModel]):
         LOG.debug(f'Setting personas={data}')
         if self._should_reset_personas(data=data):
             LOG.warning(f'Persona state TTL expired, resetting personas config')
@@ -77,18 +82,34 @@ class PersonasProvider:
             self._personas = data
         self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
 
-    def _should_reset_personas(self, data) -> bool:
+    def _should_reset_personas(self, data: List[PersonaModel]) -> bool:
+        """
+        Checks if personas should be re-initialized after setting a new value
+        for personas.
+        :param data: requested list of personas
+        :return: True if requested `data` should be ignored and personas
+            reloaded from config, False if requested `data` should be used
+            directly
+        """
         return (not (self._persona_last_sync == 0 and data)
                 and int(time()) - self._persona_last_sync > self.PERSONA_STATE_TTL)
 
     def _fetch_persona_config(self):
-        response = send_mq_request(vhost=LLM_VHOST,
-                                   request_data={"service_name": self.service_name},
-                                   target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE,
-                                   timeout=60)
-        if 'items' in response:
+        """
+        Get personas from a provider on the MQ bus and update the internal
+        `personas` reference.
+        """
+        response = send_mq_request(
+            vhost=LLM_VHOST,
+            request_data={"service_name": self.service_name},
+            target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE,
+            timeout=60)
+        self.parse_persona_response(response)
+
+    def parse_persona_response(self, persona_response: dict):
+        if 'items' in persona_response:
             self._persona_last_sync = int(time())
-        response_data = response.get('items', [])
+        response_data = persona_response.get('items', [])
         personas = []
         for item in response_data:
             item.setdefault('name', item.pop('persona_name', None))
@@ -98,10 +119,18 @@ class PersonasProvider:
         self.personas = personas
 
     def start_sync(self):
+        """
+        Update personas and start thread to periodically update from a service
+        on the MQ bus.
+        """
         self._fetch_persona_config()
-        self.persona_sync_thread.start()
+        if self.PERSONA_SYNC_INTERVAL > 0:
+            self.persona_sync_thread.start()
 
     def stop_sync(self):
+        """
+        Stop persona updates from the MQ bus.
+        """
         if self._persona_sync_thread:
             self._persona_sync_thread.cancel()
             self._persona_sync_thread = None
