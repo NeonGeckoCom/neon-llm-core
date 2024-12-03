@@ -90,10 +90,12 @@ class TestChatbot(TestCase):
 
         # Invalid response
         get_api_response.return_value = None
-        self.assertIsInstance(self.mock_chatbot.ask_chatbot(valid_user,
-                                                            valid_shout,
-                                                            valid_timestamp,
-                                                            valid_context), str)
+        from neon_llm_core.utils.constants import DEFAULT_RESPONSE
+        self.assertEqual(self.mock_chatbot.ask_chatbot(valid_user,
+                                                       valid_shout,
+                                                       valid_timestamp,
+                                                       valid_context),
+                         DEFAULT_RESPONSE)
         get_api_response.assert_called_with(shout=valid_shout)
 
     @patch.object(mock_chatbot, '_get_llm_api_opinion')
@@ -115,9 +117,10 @@ class TestChatbot(TestCase):
 
         # Invalid response
         get_api_opinion.return_value = None
-        self.assertIsInstance(self.mock_chatbot.ask_discusser(valid_options,
-                                                              valid_context),
-                              str)
+        from neon_llm_core.utils.constants import DEFAULT_RESPONSE
+        self.assertEqual(self.mock_chatbot.ask_discusser(valid_options,
+                                                         valid_context),
+                         DEFAULT_RESPONSE)
         get_api_opinion.assert_called_with(prompt=valid_prompt,
                                            options=valid_options)
 

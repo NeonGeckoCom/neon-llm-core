@@ -34,6 +34,7 @@ from neon_utils.logger import LOG
 from neon_data_models.models.api.llm import LLMPersona
 
 from neon_llm_core.utils.config import LLMMQConfig
+from neon_llm_core.utils.constants import DEFAULT_RESPONSE, DEFAULT_VOTE
 
 
 class LLMBot(ChatBot):
@@ -68,7 +69,7 @@ class LLMBot(ChatBot):
             self.prompt_id_to_shout[prompt_id] = shout
         LOG.debug(f"Getting response to {shout}")
         response = self._get_llm_api_response(shout=shout)
-        return response.response if response else "I have nothing to say here..."
+        return response.response if response else DEFAULT_RESPONSE
 
     def ask_discusser(self, options: dict, context: dict = None) -> str:
         """
@@ -85,7 +86,7 @@ class LLMBot(ChatBot):
         LOG.info(f'prompt_sentence={prompt_sentence}, options={options}')
         opinion = self._get_llm_api_opinion(prompt=prompt_sentence,
                                             options=options)
-        return opinion.opinion if opinion else "I have nothing to say here..."
+        return opinion.opinion if opinion else DEFAULT_RESPONSE
 
     def ask_appraiser(self, options: dict, context: dict = None) -> str:
         """
@@ -112,7 +113,7 @@ class LLMBot(ChatBot):
             LOG.info(f'Received answer_data={answer_data}')
             if answer_data and answer_data.sorted_answer_indexes:
                 return bots[answer_data.sorted_answer_indexes[0]]
-        return "abstain"
+        return DEFAULT_VOTE
 
     def _get_llm_api_response(self, shout: str) -> Optional[LLMProposeResponse]:
         """

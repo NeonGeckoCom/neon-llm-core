@@ -25,3 +25,5 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 LLM_VHOST = '/llm'
+DEFAULT_RESPONSE = "I have nothing to say here..."
+DEFAULT_VOTE = "abstain"
