@@ -25,7 +25,8 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from abc import abstractmethod, ABC
-from threading import Thread
+from threading import Thread, Lock
+from time import time
 from typing import Optional
 
 from neon_mq_connector.connector import MQConnector
@@ -59,6 +60,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self.register_consumers()
         self._model = None
         self._bots = list()
+        self._persona_update_lock = Lock()
+        self._last_persona_update = time()
         self._personas_provider = PersonasProvider(service_name=self.name,
                                                    ovos_config=self.ovos_config)
 
@@ -138,7 +141,12 @@ class NeonLLMMQConnector(MQConnector, ABC):
         for this LLM
         :param body: MQ message body containing persona definitions
         """
-        self._personas_provider.parse_persona_response(body)
+        if body.get("update_time", time()) <= self._last_persona_update:
+            LOG.info("Skipping update that is older than last update")
+            return
+        with self._persona_update_lock:
+            self._personas_provider.parse_persona_response(body)
+            self._last_persona_update = body.get("update_time") or time()
 
     def _handle_request_async(self, request: dict):
         message_id = request["message_id"]
