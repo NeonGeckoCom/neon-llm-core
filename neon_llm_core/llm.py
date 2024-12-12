@@ -28,7 +28,6 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Union
 
 from neon_data_models.models.api import LLMRequest, LLMResponse
-from openai import OpenAI
 from ovos_utils.log import log_deprecation
 
 
@@ -69,7 +68,7 @@ class NeonLLM(ABC):
 
     @property
     @abstractmethod
-    def model(self) -> OpenAI:
+    def model(self) -> object:
         """
         Get an OpenAI client object to send requests to.
         """
