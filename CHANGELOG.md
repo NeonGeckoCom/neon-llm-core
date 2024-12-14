@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a5](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a5) (2024-12-14)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a4...0.1.1a5)
+
+**Merged pull requests:**
+
+- Added support for async consumers in LLM MQ Connector [\#12](https://github.com/NeonGeckoCom/neon-llm-core/pull/12) ([NeonKirill](https://github.com/NeonKirill))
+
 ## [0.1.1a4](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a4) (2024-10-30)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a3...0.1.1a4)
