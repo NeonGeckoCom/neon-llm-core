@@ -41,6 +41,9 @@ class NeonLLMMQConnector(MQConnector, ABC):
     """
         Module for processing MQ requests to Fast Chat LLM
     """
+
+    async_consumers_enabled = True
+
     def __init__(self):
         self.service_name = f'neon_llm_{self.name}'
 
