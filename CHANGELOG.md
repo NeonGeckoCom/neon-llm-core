@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a6](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a6) (2025-01-02)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a5...0.1.1a6)
+
+**Merged pull requests:**
+
+- Incremented minimal required MQ version to 0.7.2a9 [\#13](https://github.com/NeonGeckoCom/neon-llm-core/pull/13) ([NeonKirill](https://github.com/NeonKirill))
+
 ## [0.1.1a5](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a5) (2024-12-14)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a4...0.1.1a5)
