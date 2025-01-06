@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a7](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a7) (2025-01-06)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a6...0.1.1a7)
+
+**Merged pull requests:**
+
+- Implement Pydantic models from `neon-data-models` [\#9](https://github.com/NeonGeckoCom/neon-llm-core/pull/9) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a6](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a6) (2025-01-02)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a5...0.1.1a6)
