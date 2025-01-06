@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2021 NeonGecko.com Inc.
+# Copyright 2008-2024 NeonGecko.com Inc.
 # BSD-3
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,5 +24,9 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from neon_data_models.models.api.llm import LLMPersona as PersonaModel
-# TODO: Mark for deprecation
+from unittest import TestCase
+
+
+class TestNeonLLM(TestCase):
+    # TODO
+    pass
