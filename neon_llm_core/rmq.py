@@ -28,12 +28,13 @@ from abc import abstractmethod, ABC
 from threading import Thread
 from typing import Optional
 
+from neon_data_models.models.api import LLMRequest
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
 from neon_data_models.models.api.mq import (LLMProposeResponse,
-                                            LLMDiscussResponse, LLMVoteResponse)
+                                            LLMDiscussResponse, LLMVoteResponse, LLMDiscussRequest, LLMVoteRequest)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
@@ -126,21 +127,16 @@ class NeonLLMMQConnector(MQConnector, ABC):
         message_id = request["message_id"]
         routing_key = request["routing_key"]
 
-        query = request["query"]
-        history = request["history"]
-        persona = request.get("persona", {})
-
         try:
-            response = self.model.ask(message=query, chat_history=history,
-                                      persona=persona)
+            response = self.model.query_model(LLMRequest(**request))
         except ValueError as err:
             LOG.error(f'ValueError={err}')
             response = ('Sorry, but I cannot respond to your message at the '
                         'moment, please try again later')
         api_response = LLMProposeResponse(message_id=message_id,
-                                          response=response,
+                                          response=response.response,
                                           routing_key=routing_key)
-        LOG.info(f"Sending response: {response}")
+        LOG.info(f"Sending response: {api_response}")
         self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
         LOG.info(f"Handled ask request for message_id={message_id}")
@@ -152,29 +148,25 @@ class NeonLLMMQConnector(MQConnector, ABC):
         Handles score requests (vote) from MQ to LLM
         :param body: request body (dict)
         """
-        message_id = body["message_id"]
-        routing_key = body["routing_key"]
+        request = LLMVoteRequest(**body)
 
-        query = body["query"]
-        responses = body["responses"]
-        persona = body.get("persona", {})
-
-        if not responses:
+        if not request.responses:
             sorted_answer_idx = []
         else:
             try:
                 sorted_answer_idx = self.model.get_sorted_answer_indexes(
-                    question=query, answers=responses, persona=persona)
+                    question=request.query, answers=request.responses,
+                    persona=request.persona.model_dump())
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 sorted_answer_idx = []
 
-        api_response = LLMVoteResponse(message_id=message_id,
-                                       routing_key=routing_key,
+        api_response = LLMVoteResponse(message_id=request.message_id,
+                                       routing_key=request.routing_key,
                                        sorted_answer_indexes=sorted_answer_idx)
         self.send_message(request_data=api_response.model_dump(),
-                          queue=routing_key)
-        LOG.info(f"Handled score request for message_id={message_id}")
+                          queue=request.routing_key)
+        LOG.info(f"Handled score request for message_id={request.message_id}")
 
     @create_mq_callback()
     def handle_opinion_request(self, body: dict):
@@ -182,46 +174,42 @@ class NeonLLMMQConnector(MQConnector, ABC):
         Handles opinion requests (discuss) from MQ to LLM
         :param body: request body (dict)
         """
-        message_id = body["message_id"]
-        routing_key = body["routing_key"]
+        request = LLMDiscussRequest(**body)
 
-        query = body["query"]
-        options = body["options"]
-        persona = body.get("persona", {})
-        responses = list(options.values())
-
-        if not responses:
+        if not request.options:
             opinion = "Sorry, but I got no options to choose from."
         else:
             try:
                 sorted_answer_indexes = self.model.get_sorted_answer_indexes(
-                    question=query, answers=responses, persona=persona)
-                best_respondent_nick, best_response = list(options.items())[
-                    sorted_answer_indexes[0]]
+                    question=request.query,
+                    answers=list(request.options.values()),
+                    persona=request.persona.model_dump())
+                best_respondent_nick, best_response = \
+                    list(request.options.items())[sorted_answer_indexes[0]]
                 opinion = self._ask_model_for_opinion(
                     respondent_nick=best_respondent_nick,
-                    question=query, answer=best_response, persona=persona)
+                    llm_request=LLMRequest(**body), answer=best_response)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 opinion = ("Sorry, but I experienced an issue trying to form "
                            "an opinion on this topic")
 
-        api_response = LLMDiscussResponse(message_id=message_id,
-                                          routing_key=routing_key,
+        api_response = LLMDiscussResponse(message_id=request.message_id,
+                                          routing_key=request.routing_key,
                                           opinion=opinion)
         self.send_message(request_data=api_response.model_dump(),
-                          queue=routing_key)
-        LOG.info(f"Handled ask request for message_id={message_id}")
+                          queue=request.routing_key)
+        LOG.info(f"Handled ask request for message_id={request.message_id}")
 
-    def _ask_model_for_opinion(self, respondent_nick: str, question: str,
-                               answer: str, persona: dict) -> str:
-        prompt = self.compose_opinion_prompt(respondent_nick=respondent_nick,
-                                             question=question,
-                                             answer=answer)
-        opinion = self.model.ask(message=prompt, chat_history=[],
-                                 persona=persona)
-        LOG.info(f'Received LLM opinion={opinion}, prompt={prompt}')
-        return opinion
+    def _ask_model_for_opinion(self, llm_request: LLMRequest,
+                               respondent_nick: str,
+                               answer: str) -> str:
+        llm_request.query = self.compose_opinion_prompt(
+            respondent_nick=respondent_nick, question=llm_request.query,
+            answer=answer)
+        opinion = self.model.query_model(llm_request)
+        LOG.info(f'Received LLM opinion={opinion}, prompt={llm_request.query}')
+        return opinion.response
 
     @staticmethod
     @abstractmethod
