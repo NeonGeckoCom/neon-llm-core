@@ -1,6 +1,6 @@
 # NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2024 NeonGecko.com Inc.
+# Copyright 2008-2025 NeonGecko.com Inc.
 # BSD-3
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@ from unittest import TestCase
 from unittest.mock import Mock
 
 from mirakuru import ProcessExitedWithError
+from neon_mq_connector.consumers import SelectConsumerThread
 from neon_mq_connector.utils.network_utils import dict_to_b64
 from port_for import get_port
 from pytest_rabbitmq.factories.executor import RabbitMqExecutor
@@ -138,6 +139,10 @@ class TestNeonLLMMQConnector(TestCase):
         self.assertIsNotNone(self.mq_llm.model, self.mq_llm.model)
         self.assertEqual(self.mq_llm._personas_provider.service_name,
                          self.mq_llm.name)
+        self.assertTrue(self.mq_llm.async_consumers_enabled)
+        self.assertEqual(self.mq_llm.consumer_thread_cls, SelectConsumerThread)
+        for consumer in self.mq_llm.consumers.values():
+            self.assertIsInstance(consumer, SelectConsumerThread)
 
     def test_handle_request(self):
         from neon_data_models.models.api.mq import (LLMProposeRequest,
