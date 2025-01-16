@@ -66,7 +66,7 @@ class PersonasProvider:
     @personas.setter
     def personas(self, data):
         LOG.debug(f'Setting personas={data}')
-        if self._should_reset_personas(data=data):
+        if self._should_reset_personas(data=data) or data == []:
             LOG.warning(f'Persona state TTL expired, resetting personas config')
             self._personas = []
             self._persona_handlers_state.init_default_handlers()
