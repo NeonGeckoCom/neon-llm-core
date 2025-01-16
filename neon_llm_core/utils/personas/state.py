@@ -86,6 +86,7 @@ class PersonaHandlersState:
         personas_to_remove = connected_personas - ignored_persona_ids
         for persona_id in personas_to_remove:
             self.remove_persona(persona_id=persona_id)
+        LOG.info(f"{len(self._created_items)} personas left after cleanup")
 
     def remove_persona(self, persona_id: str):
         LOG.info(f'Removing persona_id = {persona_id}')
