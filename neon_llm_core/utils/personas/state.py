@@ -37,18 +37,20 @@ from neon_llm_core.utils.personas.models import PersonaModel
 
 class PersonaHandlersState:
 
-    def __init__(self, service_name: str, ovos_config: dict):
+    def __init__(self, llm_name: str, ovos_config: dict):
         self._created_items: Dict[str, LLMBot] = {}
-        self.service_name = service_name
+        self.llm_name = llm_name
         self.ovos_config = ovos_config
         self.mq_config = ovos_config.get('MQ', {})
 
     def init_default_handlers(self):
         self._created_items = {}
-        if self.ovos_config.get("llm_bots", {}).get(self.service_name):
-            LOG.info(f"Chatbot(s) configured for: {self.service_name}")
-            for persona in self.ovos_config['llm_bots'][self.service_name]:
+        if self.ovos_config.get("llm_bots", {}).get(self.llm_name):
+            LOG.info(f"Chatbot(s) configured for: {self.llm_name}")
+            for persona in self.ovos_config['llm_bots'][self.llm_name]:
                 self.add_persona_handler(persona=PersonaModel.parse_obj(obj=persona))
+        else:
+            LOG.warning(f"No personas configured for {self.llm_name}")
 
     def add_persona_handler(self, persona: PersonaModel) -> Union[LLMBot, None]:
         persona_dict = persona.model_dump()
@@ -68,9 +70,9 @@ class PersonaHandlersState:
             LOG.warning(f"Persona disabled: '{persona.id}'")
             return
         # Get a configured username to use for LLM submind connections
-        persona_id = f"{persona.id}_{self.service_name}"
+        persona_id = f"{persona.id}_{self.llm_name}"
         self.ovos_config["MQ"]["users"][persona_id] = self.mq_config['users']['neon_llm_submind']
-        bot = LLMBot(llm_name=self.service_name, service_name=persona_id,
+        bot = LLMBot(llm_name=self.llm_name, service_name=persona_id,
                      persona=persona_dict, config=self.ovos_config,
                      vhost="/chatbots")
         bot.run()

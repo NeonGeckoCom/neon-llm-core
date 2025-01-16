@@ -137,7 +137,7 @@ class TestNeonLLMMQConnector(TestCase):
         self.assertIsInstance(self.mq_llm.ovos_config, dict)
         self.assertEqual(self.mq_llm.vhost, "/llm")
         self.assertIsNotNone(self.mq_llm.model, self.mq_llm.model)
-        self.assertEqual(self.mq_llm._personas_provider.service_name,
+        self.assertEqual(self.mq_llm._personas_provider.llm_name,
                          self.mq_llm.name)
         self.assertTrue(self.mq_llm.async_consumers_enabled)
         self.assertEqual(self.mq_llm.consumer_thread_cls, SelectConsumerThread)

@@ -41,9 +41,9 @@ class PersonasProvider:
     PERSONA_SYNC_INTERVAL = int(os.getenv("PERSONA_SYNC_INTERVAL", 5 * 60))
     GET_CONFIGURED_PERSONAS_QUEUE = "get_configured_personas"
 
-    def __init__(self, service_name: str, ovos_config: dict):
-        self.service_name = service_name
-        self._persona_handlers_state = PersonaHandlersState(service_name=service_name,
+    def __init__(self, llm_name: str, ovos_config: dict):
+        self.llm_name = llm_name
+        self._persona_handlers_state = PersonaHandlersState(llm_name=llm_name,
                                                             ovos_config=ovos_config)
         self._personas = []  # list of personas available for given service
         self._persona_last_sync = 0
@@ -80,7 +80,7 @@ class PersonasProvider:
 
     def _fetch_persona_config(self):
         response = send_mq_request(vhost=LLM_VHOST,
-                                   request_data={"service_name": self.service_name},
+                                   request_data={"service_name": self.llm_name},
                                    target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE,
                                    timeout=60)
         if 'items' in response:

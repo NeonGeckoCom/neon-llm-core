@@ -59,7 +59,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self.register_consumers()
         self._model = None
         self._bots = list()
-        self._personas_provider = PersonasProvider(service_name=self.name,
+        self._personas_provider = PersonasProvider(llm_name=self.name,
                                                    ovos_config=self.ovos_config)
 
     def register_consumers(self):

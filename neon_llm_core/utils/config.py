@@ -34,11 +34,13 @@ from typing import Union
 from neon_utils.log_utils import init_log
 from neon_utils.logger import LOG
 from ovos_config.config import Configuration
+from ovos_utils.log import deprecated
 
 from neon_llm_core.utils.constants import LLM_VHOST
 import neon_mq_connector.utils.client_utils as mq_connector_client_utils
 
 
+@deprecated("Legacy configuration file is deprecated", "1.0.0")
 def load_legacy_config() -> Union[dict, None]:
     legacy_config_path = os.getenv("NEON_LLM_LEGACY_CONFIG", "/app/app/config.json")
     if isfile(legacy_config_path):
