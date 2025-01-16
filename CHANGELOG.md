@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a8](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a8) (2025-01-16)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a7...0.1.1a8)
+
+**Merged pull requests:**
+
+- Update dependencies and Add test for ConsumerThread [\#14](https://github.com/NeonGeckoCom/neon-llm-core/pull/14) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a7](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a7) (2025-01-06)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a6...0.1.1a7)
