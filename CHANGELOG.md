@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a9](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a9) (2025-01-17)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a8...0.1.1a9)
+
+**Merged pull requests:**
+
+- Update PersonasProvider to use default personas when none are configured [\#15](https://github.com/NeonGeckoCom/neon-llm-core/pull/15) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a8](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a8) (2025-01-16)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a7...0.1.1a8)
