@@ -70,6 +70,9 @@ class PersonasProvider:
             LOG.warning(f'Persona state TTL expired, resetting personas config')
             self._personas = []
             self._persona_handlers_state.init_default_handlers()
+        elif not data:
+            self._persona_handlers_state.init_default_handlers()
+            return
         else:
             self._personas = data
         self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
