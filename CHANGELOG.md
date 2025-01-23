@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a10](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a10) (2025-01-23)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a9...0.1.1a10)
+
+**Merged pull requests:**
+
+- Raise an exception if MQ is not connected during connector startup [\#16](https://github.com/NeonGeckoCom/neon-llm-core/pull/16) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a9](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a9) (2025-01-17)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a8...0.1.1a9)
