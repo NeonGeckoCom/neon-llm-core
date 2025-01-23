@@ -241,6 +241,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
                     run_sync=run_sync,
                     run_observer=run_observer,
                     **kwargs)
+        if not self.started:
+            raise RuntimeError(f'Failed to connect to MQ. config={self.config}')
         self._personas_provider.start_sync()
 
     def stop(self):
