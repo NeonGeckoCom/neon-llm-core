@@ -32,7 +32,7 @@ from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
 
 from neon_llm_core.utils.constants import LLM_VHOST
-from neon_llm_core.utils.personas.models import PersonaModel
+from neon_llm_core.utils.personas.models import PersonaModel, PersonaDeleteModel
 from neon_llm_core.utils.personas.state import PersonaHandlersState
 
 
@@ -72,27 +72,55 @@ class PersonasProvider:
     def personas(self, data: List[PersonaModel]):
         LOG.debug(f'Setting personas={data}')
         if self._should_reset_personas(data=data):
-            LOG.warning(f'Persona state TTL expired, resetting personas config')
+            LOG.warning(f'Persona state expired, setting default personas')
             self._personas = []
-            self._persona_handlers_state.init_default_handlers()
-        elif not data:
-            self._persona_handlers_state.init_default_handlers()
-            return
+            self._persona_handlers_state.init_default_personas()
         else:
             self._personas = data
-        self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
+            self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
 
     def _should_reset_personas(self, data: List[PersonaModel]) -> bool:
         """
         Checks if personas should be re-initialized after setting a new value
         for personas.
+
+        If PERSONA_SYNC_INTERVAL is enabled - verifies based on TTL, otherwise
+
         :param data: requested list of personas
         :return: True if requested `data` should be ignored and personas
             reloaded from config, False if requested `data` should be used
             directly
         """
+        return self._should_reset_personas_based_on_ttl(data) if self.PERSONA_SYNC_INTERVAL > 0 else not data
+
+    def _should_reset_personas_based_on_ttl(self, data: dict) -> bool:
+        """
+        Determines whether personas should be reset based on Time-to-Live (TTL) and
+        the synchronization timestamp.
+
+        Examines the time elapsed since the last persona synchronization in relation
+        to a predefined TTL. Also considers whether the state of the personas and the
+        incoming data indicate a need for resetting.
+
+        :param data: provided persona data
+
+        returns: True if personas need to be reset based on TTL False otherwise.
+        """
         return (not (self._persona_last_sync == 0 and data)
                 and int(time()) - self._persona_last_sync > self.PERSONA_STATE_TTL)
+
+    def stop_default_personas(self):
+        """
+        Stops all default personas that are currently running.
+
+        This method checks whether there are any default personas actively running
+        and stops each one by invoking the respective removal method. It ensures
+        that all default personas listed in the current persona handler state are
+        terminated properly.
+        """
+        if self._persona_handlers_state.default_personas_running:
+            LOG.info("Stopping default personas")
+            self._persona_handlers_state.clean_up_personas()
 
     def _fetch_persona_config(self):
         """
@@ -107,16 +135,68 @@ class PersonasProvider:
         self.parse_persona_response(response)
 
     def parse_persona_response(self, persona_response: dict):
+        """
+        Parses and processes a response containing persona data, updates internal state,
+        and manages personas accordingly.
+
+        :param persona_response: A dictionary containing the response data with
+                                 persona information.
+                                 Expected to contain a key 'items' holding a list of
+                                 persona details.
+        """
         if 'items' in persona_response:
             self._persona_last_sync = int(time())
         response_data = persona_response.get('items', [])
         personas = []
+        self.stop_default_personas()
         for item in response_data:
-            item.setdefault('name', item.pop('persona_name', None))
-            persona = PersonaModel.parse_obj(obj=item)
-            self._persona_handlers_state.add_persona_handler(persona=persona)
+            persona = self.apply_incoming_persona_data(item)
             personas.append(persona)
         self.personas = personas
+
+    def apply_incoming_persona_data(self, persona_data: dict) -> PersonaModel:
+        """
+        Apply and update incoming persona data and return an updated PersonaModel instance.
+
+        This method is responsible for processing incoming persona data, applying necessary
+        updates to it, and adding the updated persona instance to the state management system.
+
+        It ensures proper validation of the persona data, logs a successful update message,
+        and returns the resulting `PersonaModel`.
+
+        :param persona_data : A dictionary containing details of the persona, where
+                              specific key-value mappings are applied for validation.
+
+        returns: A validated and updated `PersonaModel` instance based on the provided  input data.
+        """
+        persona_data.setdefault('name', persona_data.pop('persona_name', None))
+        persona = PersonaModel.model_validate(obj=persona_data)
+        self._persona_handlers_state.add_persona_handler(persona=persona)
+        LOG.info(f"Persona {persona.id} updated successfully")
+        return persona
+
+    def remove_persona(self, persona_data: dict):
+        """
+        Removes a persona from the active persona handlers state.
+
+        This method handles the removal of a persona based on persona data.
+        It ensures that the default personas are initialized if no other connected personas
+        remain after the removal.
+
+        :param persona_data: A dictionary containing details of the persona to be removed.
+        """
+        if (self._persona_handlers_state.has_connected_personas() and
+                not self._persona_handlers_state.default_personas_running):
+            persona_data.setdefault('name', persona_data.pop('persona_name', None))
+            persona = PersonaDeleteModel.model_validate(obj=persona_data)
+            self._persona_handlers_state.remove_persona(persona_id=persona.id)
+            LOG.info(f"Persona {persona.id} removed successfully")
+
+            if not self._persona_handlers_state.has_connected_personas():
+                LOG.info("No personas connected after the last removal - setting default personas")
+                self._persona_handlers_state.init_default_personas()
+        else:
+            LOG.warning("No running personas detected - skipping persona removal")
 
     def start_sync(self):
         """

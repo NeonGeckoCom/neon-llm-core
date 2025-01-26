@@ -82,12 +82,17 @@ class NeonLLMMQConnector(MQConnector, ABC):
                                queue=self.queue_opinion,
                                callback=self.handle_opinion_request,
                                on_error=self.default_error_handler,)
-        self.register_consumer(name=f'neon_llm_{self.name}_personas',
-                               vhost=self.vhost,
-                               queue=self.queue_personas,
-                               callback=self.handle_new_personas,
-                               on_error=self.default_error_handler)
-    
+        self.register_subscriber(name=f'neon_llm_{self.name}_update_persona',
+                                 vhost=self.vhost,
+                                 exchange=self.exchange_persona_updated,
+                                 callback=self.handle_persona_update,
+                                 on_error=self.default_error_handler)
+        self.register_subscriber(name=f'neon_llm_{self.name}_delete_persona',
+                                 vhost=self.vhost,
+                                 exchange=self.exchange_persona_deleted,
+                                 callback=self.handle_persona_delete,
+                                 on_error=self.default_error_handler)
+
     @property
     @abstractmethod
     def name(self):
@@ -113,8 +118,12 @@ class NeonLLMMQConnector(MQConnector, ABC):
         return f"{self.name}_discussion_input"
 
     @property
-    def queue_personas(self):
-        return f"{self.name}_personas_input"
+    def exchange_persona_updated(self):
+        return f"{self.name}_persona_updated"
+
+    @property
+    def exchange_persona_deleted(self):
+        return f"{self.name}_persona_deleted"
 
     @property
     @abstractmethod
@@ -135,18 +144,25 @@ class NeonLLMMQConnector(MQConnector, ABC):
         return t
 
     @create_mq_callback()
-    def handle_new_personas(self, body: dict):
+    def handle_persona_update(self, body: dict):
         """
-        Handles an emitted message from the server containing personas defined
+        Handles an emitted message from the server containing updated persona data
         for this LLM
-        :param body: MQ message body containing persona definitions
+        :param body: MQ message body containing persona data for update
         """
-        if body.get("update_time", time()) <= self._last_persona_update:
-            LOG.info("Skipping update that is older than last update")
-            return
         with self._persona_update_lock:
-            self._personas_provider.parse_persona_response(body)
-            self._last_persona_update = body.get("update_time") or time()
+            self._personas_provider.stop_default_personas()
+            self._personas_provider.apply_incoming_persona_data(body)
+
+    @create_mq_callback()
+    def handle_persona_delete(self, body: dict):
+        """
+        Handles an emitted message from the server containing deleted persona data
+        for this LLM
+        :param body: MQ message body containing persona data for deletion
+        """
+        with self._persona_update_lock:
+            self._personas_provider.remove_persona(body)
 
     def _handle_request_async(self, request: dict):
         message_id = request["message_id"]

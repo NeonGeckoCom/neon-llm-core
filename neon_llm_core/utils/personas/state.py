@@ -27,6 +27,8 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import time
+from functools import cached_property
+from threading import Lock
 from typing import Dict, List, Optional
 
 from neon_utils.logger import LOG
@@ -46,17 +48,30 @@ class PersonaHandlersState:
         self.service_name = service_name
         self.ovos_config = ovos_config
         self.mq_config = ovos_config.get('MQ', {})
+        self.default_personas_running = False
 
-    def init_default_handlers(self):
+        self.personas_clean_up_lock = Lock()
+        self.personas_remove_lock = Lock()
+
+    @cached_property
+    def default_personas(self):
+        return self.ovos_config.get("llm_bots", {}).get(self.service_name, [])
+
+    def has_connected_personas(self) -> bool:
+        return bool(self._created_items)
+
+    def init_default_personas(self):
         """
         Initializes LLMBot instances for all personas defined in configuration.
         """
-        self._created_items = {}
-        if self.ovos_config.get("llm_bots", {}).get(self.service_name):
-            LOG.info(f"Chatbot(s) configured for: {self.service_name}")
-            for persona in self.ovos_config['llm_bots'][self.service_name]:
+        if self.default_personas and not self.default_personas_running:
+            self.clean_up_personas()
+            LOG.info(f"Initializing default personas for: {self.service_name}")
+            for persona in self.default_personas:
                 self.add_persona_handler(
-                    persona=PersonaModel.parse_obj(obj=persona))
+                    persona=PersonaModel.model_validate(obj=persona)
+                )
+            self.default_personas_running = True
 
     def add_persona_handler(self, persona: PersonaModel) -> Optional[LLMBot]:
         """
@@ -95,13 +110,20 @@ class PersonaHandlersState:
         return bot
 
     def clean_up_personas(self, ignore_items: List[PersonaModel] = None):
-        connected_personas = set(self._created_items)
-        ignored_persona_ids = set(persona.id for persona in ignore_items or [])
-        personas_to_remove = connected_personas - ignored_persona_ids
-        for persona_id in personas_to_remove:
-            self.remove_persona(persona_id=persona_id)
+        with self.personas_clean_up_lock:
+            connected_personas = set(self._created_items)
+            ignored_persona_ids = set(persona.id for persona in ignore_items or [])
+            personas_to_remove = connected_personas - ignored_persona_ids
+            for persona_id in personas_to_remove:
+                self.remove_persona(persona_id=persona_id)
 
     def remove_persona(self, persona_id: str):
-        LOG.info(f'Removing persona_id = {persona_id}')
-        self._created_items[persona_id].stop()
-        self._created_items.pop(persona_id, None)
+        with self.personas_remove_lock:
+            if persona_id in self._created_items:
+                LOG.info(f'Removing persona_id = {persona_id}')
+                self._created_items[persona_id].stop()
+                self._created_items.pop(persona_id, None)
+
+                if not self.has_connected_personas() and self.default_personas_running:
+                    LOG.info("All default personas stopped")
+                    self.default_personas_running = False
