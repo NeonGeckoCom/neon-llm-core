@@ -27,12 +27,16 @@ import os
 from time import time
 from typing import List
 
+from neon_data_models.models.api.llm import (
+    LLMPersona,
+    LLMPersonaIdentity,
+)
+
 from neon_mq_connector.utils import RepeatingTimer
 from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
 
 from neon_llm_core.utils.constants import LLM_VHOST
-from neon_llm_core.utils.personas.models import PersonaModel, PersonaDeleteModel
 from neon_llm_core.utils.personas.state import PersonaHandlersState
 
 
@@ -65,11 +69,11 @@ class PersonasProvider:
         return self._persona_sync_thread
 
     @property
-    def personas(self) -> List[PersonaModel]:
+    def personas(self) -> List[LLMPersona]:
         return self._personas
 
     @personas.setter
-    def personas(self, data: List[PersonaModel]):
+    def personas(self, data: List[LLMPersona]):
         LOG.debug(f'Setting personas={data}')
         if self._should_reset_personas(data=data):
             LOG.warning(f'Persona state expired, setting default personas')
@@ -79,7 +83,7 @@ class PersonasProvider:
             self._personas = data
             self._persona_handlers_state.clean_up_personas(ignore_items=self._personas)
 
-    def _should_reset_personas(self, data: List[PersonaModel]) -> bool:
+    def _should_reset_personas(self, data: List[LLMPersona]) -> bool:
         """
         Checks if personas should be re-initialized after setting a new value
         for personas.
@@ -154,7 +158,7 @@ class PersonasProvider:
             personas.append(persona)
         self.personas = personas
 
-    def apply_incoming_persona_data(self, persona_data: dict) -> PersonaModel:
+    def apply_incoming_persona_data(self, persona_data: dict) -> LLMPersona:
         """
         Apply and update incoming persona data and return an updated PersonaModel instance.
 
@@ -170,7 +174,7 @@ class PersonasProvider:
         returns: A validated and updated `PersonaModel` instance based on the provided  input data.
         """
         persona_data.setdefault('name', persona_data.pop('persona_name', None))
-        persona = PersonaModel.model_validate(obj=persona_data)
+        persona = LLMPersona.model_validate(obj=persona_data)
         self._persona_handlers_state.add_persona_handler(persona=persona)
         LOG.info(f"Persona {persona.id} updated successfully")
         return persona
@@ -188,7 +192,7 @@ class PersonasProvider:
         if (self._persona_handlers_state.has_connected_personas() and
                 not self._persona_handlers_state.default_personas_running):
             persona_data.setdefault('name', persona_data.pop('persona_name', None))
-            persona = PersonaDeleteModel.model_validate(obj=persona_data)
+            persona = LLMPersonaIdentity.model_validate(obj=persona_data)
             self._persona_handlers_state.remove_persona(persona_id=persona.id)
             LOG.info(f"Persona {persona.id} removed successfully")
 

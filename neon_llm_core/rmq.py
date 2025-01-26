@@ -33,8 +33,11 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
-from neon_data_models.models.api.mq import (LLMProposeResponse,
-                                            LLMDiscussResponse, LLMVoteResponse)
+from neon_data_models.models.api.mq import (
+    LLMProposeResponse,
+    LLMDiscussResponse,
+    LLMVoteResponse,
+)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM

@@ -31,10 +31,9 @@ from functools import cached_property
 from threading import Lock
 from typing import Dict, List, Optional
 
+from neon_data_models.models.api.llm import LLMPersona
 from neon_utils.logger import LOG
-
 from neon_llm_core.chatbot import LLMBot
-from neon_llm_core.utils.personas.models import PersonaModel
 
 
 class PersonaHandlersState:
@@ -69,11 +68,11 @@ class PersonaHandlersState:
             LOG.info(f"Initializing default personas for: {self.service_name}")
             for persona in self.default_personas:
                 self.add_persona_handler(
-                    persona=PersonaModel.model_validate(obj=persona)
+                    persona=LLMPersona.model_validate(obj=persona)
                 )
             self.default_personas_running = True
 
-    def add_persona_handler(self, persona: PersonaModel) -> Optional[LLMBot]:
+    def add_persona_handler(self, persona: LLMPersona) -> Optional[LLMBot]:
         """
         Creates an `LLMBot` instance for the given persona if the persona does
         not yet exist AND the persona is not disabled in configuration.
@@ -109,7 +108,7 @@ class PersonaHandlersState:
         self._created_items[persona.id] = bot
         return bot
 
-    def clean_up_personas(self, ignore_items: List[PersonaModel] = None):
+    def clean_up_personas(self, ignore_items: List[LLMPersona] = None):
         with self.personas_clean_up_lock:
             connected_personas = set(self._created_items)
             ignored_persona_ids = set(persona.id for persona in ignore_items or [])
