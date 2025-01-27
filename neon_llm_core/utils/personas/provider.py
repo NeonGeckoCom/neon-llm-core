@@ -175,8 +175,22 @@ class PersonasProvider:
         """
         persona_data.setdefault('name', persona_data.pop('persona_name', None))
         persona = LLMPersona.model_validate(obj=persona_data)
-        self._persona_handlers_state.add_persona_handler(persona=persona)
-        LOG.info(f"Persona {persona.id} updated successfully")
+        created_handler = self._persona_handlers_state.add_persona_handler(persona=persona)
+
+        if created_handler:
+            LOG.info(f"Persona {persona.id} updated successfully")
+
+            # Once first manually configured persona added - pruning default personas
+            if self._persona_handlers_state.default_personas_running:
+                LOG.info("Cleaning up default personas")
+                self._persona_handlers_state.clean_up_personas(ignore_items=[persona.id])
+                self._persona_handlers_state.default_personas_running = False
+
+        # May occur if the last updated persona was set to be disabled
+        if not self._persona_handlers_state.has_connected_personas():
+            LOG.info("No personas connected after the last update - setting default personas")
+            self._persona_handlers_state.init_default_personas()
+
         return persona
 
     def remove_persona(self, persona_data: dict):

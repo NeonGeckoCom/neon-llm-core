@@ -26,7 +26,6 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
 from functools import cached_property
 from threading import Lock
 from typing import Dict, List, Optional
@@ -71,6 +70,11 @@ class PersonaHandlersState:
                     persona=LLMPersona.model_validate(obj=persona)
                 )
             self.default_personas_running = True
+        else:
+            if self.default_personas_running:
+                LOG.info('Default personas already running')
+            elif not self.default_personas:
+                LOG.warning('Default personas not configured')
 
     def add_persona_handler(self, persona: LLMPersona) -> Optional[LLMBot]:
         """
@@ -83,19 +87,13 @@ class PersonaHandlersState:
         persona_dict = persona.model_dump()
         if persona.id in list(self._created_items):
             if self._created_items[persona.id].persona != persona_dict:
-                LOG.warning(f"Overriding already existing persona: "
-                            f"'{persona.id}' with new data={persona}")
-                try:
-                    self._created_items[persona.id].stop()
-                    # time to gracefully stop the submind
-                    time.sleep(0.5)
-                except Exception as ex:
-                    LOG.warning(f'Failed to gracefully stop {persona.id}, ex={str(ex)}')
+                LOG.warning(f"Recreating persona: '{persona.id}' with new data={persona}")
+                self.remove_persona(persona_id=persona.id)
             else:
                 LOG.debug('Persona config provided is identical to existing, skipping')
-                return self._created_items[persona.id]
+                return
         if not persona.enabled:
-            LOG.warning(f"Persona disabled: '{persona.id}'")
+            LOG.warning(f"Skipping disabled persona: '{persona.id}'")
             return
         # Get a configured username to use for LLM submind connections
         persona_id = f"{persona.id}_{self.service_name}"
@@ -119,10 +117,9 @@ class PersonaHandlersState:
     def remove_persona(self, persona_id: str):
         with self.personas_remove_lock:
             if persona_id in self._created_items:
-                LOG.info(f'Removing persona_id = {persona_id}')
-                self._created_items[persona_id].stop()
-                self._created_items.pop(persona_id, None)
-
-                if not self.has_connected_personas() and self.default_personas_running:
-                    LOG.info("All default personas stopped")
-                    self.default_personas_running = False
+                try:
+                    LOG.info(f'Removing persona_id = {persona_id}')
+                    self._created_items[persona_id].stop()
+                    self._created_items.pop(persona_id, None)
+                except Exception as ex:
+                    LOG.warning(f'Failed to gracefully stop persona={persona_id!r}, ex={str(ex)}')

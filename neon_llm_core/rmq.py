@@ -154,7 +154,6 @@ class NeonLLMMQConnector(MQConnector, ABC):
         :param body: MQ message body containing persona data for update
         """
         with self._persona_update_lock:
-            self._personas_provider.stop_default_personas()
             self._personas_provider.apply_incoming_persona_data(body)
 
     @create_mq_callback()
