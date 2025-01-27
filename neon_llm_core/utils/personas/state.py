@@ -55,6 +55,10 @@ class PersonaHandlersState:
     def default_personas(self):
         return self.ovos_config.get("llm_bots", {}).get(self.service_name, [])
 
+    @property
+    def connected_persona_ids(self) -> List[str]:
+        return list(self._created_items)
+
     def has_connected_personas(self) -> bool:
         return bool(self._created_items)
 
@@ -72,7 +76,7 @@ class PersonaHandlersState:
             self.default_personas_running = True
         else:
             if self.default_personas_running:
-                LOG.info('Default personas already running')
+                LOG.debug('Default personas already running')
             elif not self.default_personas:
                 LOG.warning('Default personas not configured')
 

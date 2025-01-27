@@ -25,7 +25,7 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 import os
 from time import time
-from typing import List
+from typing import List, Optional
 
 from neon_data_models.models.api.llm import (
     LLMPersona,
@@ -35,6 +35,7 @@ from neon_data_models.models.api.llm import (
 from neon_mq_connector.utils import RepeatingTimer
 from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
+from pydantic import ValidationError
 
 from neon_llm_core.utils.constants import LLM_VHOST
 from neon_llm_core.utils.personas.state import PersonaHandlersState
@@ -113,19 +114,6 @@ class PersonasProvider:
         return (not (self._persona_last_sync == 0 and data)
                 and int(time()) - self._persona_last_sync > self.PERSONA_STATE_TTL)
 
-    def stop_default_personas(self):
-        """
-        Stops all default personas that are currently running.
-
-        This method checks whether there are any default personas actively running
-        and stops each one by invoking the respective removal method. It ensures
-        that all default personas listed in the current persona handler state are
-        terminated properly.
-        """
-        if self._persona_handlers_state.default_personas_running:
-            LOG.info("Stopping default personas")
-            self._persona_handlers_state.clean_up_personas()
-
     def _fetch_persona_config(self):
         """
         Get personas from a provider on the MQ bus and update the internal
@@ -151,48 +139,68 @@ class PersonasProvider:
         if 'items' in persona_response:
             self._persona_last_sync = int(time())
         response_data = persona_response.get('items', [])
-        personas = []
-        self.stop_default_personas()
-        for item in response_data:
-            persona = self.apply_incoming_persona_data(item)
-            personas.append(persona)
-        self.personas = personas
+        validated_personas = [self._validate_persona_data(persona_data) for persona_data in response_data]
+        active_personas = []
+        for persona in validated_personas:
+            persona_applied = self.apply_incoming_persona(persona=persona)
+            if persona_applied:
+                active_personas.append(persona)
+        self.personas = active_personas
 
-    def apply_incoming_persona_data(self, persona_data: dict) -> LLMPersona:
+    @staticmethod
+    def _validate_persona_data(persona_data: dict) -> Optional[LLMPersona]:
         """
-        Apply and update incoming persona data and return an updated PersonaModel instance.
-
-        This method is responsible for processing incoming persona data, applying necessary
-        updates to it, and adding the updated persona instance to the state management system.
-
-        It ensures proper validation of the persona data, logs a successful update message,
-        and returns the resulting `PersonaModel`.
+        Validates of the persona data and returns the resulting `PersonaModel`.
+        If validation fails - logs error and returns None
 
         :param persona_data : A dictionary containing details of the persona, where
                               specific key-value mappings are applied for validation.
 
-        returns: A validated and updated `PersonaModel` instance based on the provided  input data.
+        returns: A validated and updated `PersonaModel` instance based on the provided data if
+                 validation was successful, None otherwise
         """
         persona_data.setdefault('name', persona_data.pop('persona_name', None))
-        persona = LLMPersona.model_validate(obj=persona_data)
-        created_handler = self._persona_handlers_state.add_persona_handler(persona=persona)
 
-        if created_handler:
+        try:
+            persona = LLMPersona.model_validate(obj=persona_data)
+        except ValidationError as err:
+            LOG.error(f"Failed to apply persona data from {persona_data} - {str(err)}")
+            return
+        return persona
+
+    def apply_incoming_persona(self, persona: LLMPersona) -> bool:
+        """
+        Attempts to add incoming persona and return an updated PersonaModel instance if successful.
+        If default personas are running upon adding persona - removes default personas.
+        If state container has only one running persona & it was disabled by this method -
+        triggers initialisation of the default personas.
+
+        :param persona: `LLMPersona` instance to add to the `PersonaHandlersState` container
+
+        :returns: True if incoming persona object in case of successful addition or if identical persona already exists
+                  False otherwise
+        """
+
+        new_persona = self._persona_handlers_state.add_persona_handler(persona=persona)
+
+        if new_persona:
             LOG.info(f"Persona {persona.id} updated successfully")
 
             # Once first manually configured persona added - pruning default personas
             if self._persona_handlers_state.default_personas_running:
-                LOG.info("Removing default personas")
+                LOG.info("Starting to remove default personas")
                 self._persona_handlers_state.clean_up_personas(ignore_items=[persona])
                 self._persona_handlers_state.default_personas_running = False
-                LOG.info("Removed default personas")
+                LOG.info("Completed removing of default personas")
 
-        # May occur if the last updated persona was set to be disabled
-        if not self._persona_handlers_state.has_connected_personas():
-            LOG.info("No personas connected after the last update - setting default personas")
-            self._persona_handlers_state.init_default_personas()
+        elif persona.id not in self._persona_handlers_state.connected_persona_ids:
+            # May occur if the last updated persona was set to be disabled
+            if not self._persona_handlers_state.has_connected_personas():
+                LOG.info("No personas connected after the last update - setting default personas")
+                self._persona_handlers_state.init_default_personas()
+            return False
 
-        return persona
+        return True
 
     def remove_persona(self, persona_data: dict):
         """
