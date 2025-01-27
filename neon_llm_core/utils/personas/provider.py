@@ -183,7 +183,7 @@ class PersonasProvider:
             # Once first manually configured persona added - pruning default personas
             if self._persona_handlers_state.default_personas_running:
                 LOG.info("Cleaning up default personas")
-                self._persona_handlers_state.clean_up_personas(ignore_items=[persona.id])
+                self._persona_handlers_state.clean_up_personas(ignore_items=[persona])
                 self._persona_handlers_state.default_personas_running = False
 
         # May occur if the last updated persona was set to be disabled
