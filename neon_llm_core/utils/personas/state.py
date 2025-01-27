@@ -87,7 +87,7 @@ class PersonaHandlersState:
         persona_dict = persona.model_dump()
         if persona.id in list(self._created_items):
             if self._created_items[persona.id].persona != persona_dict:
-                LOG.warning(f"Recreating persona: '{persona.id}' with new data={persona}")
+                LOG.info(f"Received new data for persona: '{persona.id}' - removing old instance")
                 self.remove_persona(persona_id=persona.id)
             else:
                 LOG.debug('Persona config provided is identical to existing, skipping')
