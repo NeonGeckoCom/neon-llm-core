@@ -26,9 +26,14 @@
 
 from typing import List, Optional
 from chatbot_core.v2 import ChatBot
-from neon_data_models.models.api.mq import (LLMProposeRequest,
-                                            LLMDiscussRequest, LLMVoteRequest, LLMProposeResponse, LLMDiscussResponse,
-                                            LLMVoteResponse)
+from neon_data_models.models.api.mq import (
+    LLMProposeRequest,
+    LLMDiscussRequest,
+    LLMVoteRequest,
+    LLMProposeResponse,
+    LLMDiscussResponse,
+    LLMVoteResponse,
+)
 from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
 from neon_data_models.models.api.llm import LLMPersona
