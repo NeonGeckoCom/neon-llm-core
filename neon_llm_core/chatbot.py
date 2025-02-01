@@ -109,7 +109,7 @@ class LLMBot(ChatBot):
         options = {k: v for k, v in options.items()
                    if k != self.service_name}
 
-        if options:
+        if prompt_sentence and options:
             bots = list(options)
             bot_responses = list(options.values())
             LOG.info(f'bots={bots}, answers={bot_responses}')
