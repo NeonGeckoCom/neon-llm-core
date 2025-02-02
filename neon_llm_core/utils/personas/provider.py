@@ -124,9 +124,9 @@ class PersonasProvider:
             request_data={"service_name": self.service_name},
             target_queue=PersonasProvider.GET_CONFIGURED_PERSONAS_QUEUE,
             timeout=60)
-        self.parse_persona_response(response)
+        self.parse_persona_config_response(response)
 
-    def parse_persona_response(self, persona_response: dict):
+    def parse_persona_config_response(self, persona_response: dict):
         """
         Parses and processes a response containing persona data, updates internal state,
         and manages personas accordingly.
@@ -139,13 +139,30 @@ class PersonasProvider:
         if 'items' in persona_response:
             self._persona_last_sync = int(time())
         response_data = persona_response.get('items', [])
-        validated_personas = [self._validate_persona_data(persona_data) for persona_data in response_data]
         active_personas = []
-        for persona in validated_personas:
-            persona_applied = self.apply_incoming_persona(persona=persona)
-            if persona_applied:
-                active_personas.append(persona)
+        for persona_data in response_data:
+            applied_persona = self.apply_persona_data(persona_data=persona_data)
+            if applied_persona:
+                active_personas.append(applied_persona)
         self.personas = active_personas
+
+    def apply_persona_data(self, persona_data: dict) -> Optional[LLMPersona]:
+        """
+        Validates and applies persona data.
+
+        Takes a dictionary representing persona data, validates it,
+        and applies the validated persona to the current instance.
+        If the validation succeeds, it returns the applied persona. Otherwise, returns None.
+
+        :param persona_data: Dictionary containing persona data
+
+        :returns: The validated and applied persona instance if validation is successful, or None otherwise.
+        """
+        validated_persona = self._validate_persona_data(persona_data)
+        if validated_persona:
+            persona_added = self._add_persona(persona=validated_persona)
+            if persona_added:
+                return validated_persona
 
     @staticmethod
     def _validate_persona_data(persona_data: dict) -> Optional[LLMPersona]:
@@ -162,13 +179,32 @@ class PersonasProvider:
         persona_data.setdefault('name', persona_data.pop('persona_name', None))
 
         try:
-            persona = LLMPersona.model_validate(obj=persona_data)
+            return LLMPersona.model_validate(obj=persona_data)
         except ValidationError as err:
             LOG.error(f"Failed to apply persona data from {persona_data} - {str(err)}")
             return
-        return persona
 
-    def apply_incoming_persona(self, persona: LLMPersona) -> bool:
+    @staticmethod
+    def _validate_persona_identity(persona_identity_data: dict) -> Optional[LLMPersonaIdentity]:
+        """
+        Validates of the persona data and returns the resulting `PersonaModel`.
+        If validation fails - logs error and returns None
+
+        :param persona_identity_data : A dictionary containing details of the persona identity, where
+                                       specific key-value mappings are applied for validation.
+
+        returns: A validated and updated `LLMPersonaIdentity` instance based on the provided data if
+                 validation was successful, None otherwise
+        """
+        persona_identity_data.setdefault('name', persona_identity_data.pop('persona_name', None))
+
+        try:
+            return LLMPersonaIdentity.model_validate(obj=persona_identity_data)
+        except ValidationError as err:
+            LOG.error(f"Failed to apply persona identity data from {persona_identity_data} - {str(err)}")
+            return
+
+    def _add_persona(self, persona: LLMPersona) -> bool:
         """
         Attempts to add incoming persona and return an updated PersonaModel instance if successful.
         If default personas are running upon adding persona - removes default personas.
@@ -214,14 +250,13 @@ class PersonasProvider:
         """
         if (self._persona_handlers_state.has_connected_personas() and
                 not self._persona_handlers_state.default_personas_running):
-            persona_data.setdefault('name', persona_data.pop('persona_name', None))
-            persona = LLMPersonaIdentity.model_validate(obj=persona_data)
-            self._persona_handlers_state.remove_persona(persona_id=persona.id)
-            LOG.info(f"Persona {persona.id} removed successfully")
-
-            if not self._persona_handlers_state.has_connected_personas():
-                LOG.info("No personas connected after the last removal - setting default personas")
-                self._persona_handlers_state.init_default_personas()
+            persona_identity = self._validate_persona_identity(persona_identity_data=persona_data)
+            if persona_identity:
+                self._persona_handlers_state.remove_persona(persona_id=persona_identity.id)
+                LOG.info(f"Persona {persona_identity.id} removed successfully")
+                if not self._persona_handlers_state.has_connected_personas():
+                    LOG.info("No personas connected after the last removal - setting default personas")
+                    self._persona_handlers_state.init_default_personas()
         else:
             LOG.warning("No running personas detected - skipping persona removal")
 

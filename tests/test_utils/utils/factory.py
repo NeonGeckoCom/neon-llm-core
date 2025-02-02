@@ -26,7 +26,7 @@
 
 import uuid
 
-from neon_data_models.models import LLMPersona
+from neon_data_models.models import LLMPersona, LLMPersonaIdentity
 
 
 class PersonaFactory:
@@ -43,4 +43,11 @@ class PersonaFactory:
             description=f"Mock Persona {cls._random_uuid_hex()}",
             system_prompt=f"Mock Prompt: {cls._random_uuid_hex()}",
             enabled=enabled,
+        )
+
+    @classmethod
+    def create_mock_persona_identity(cls):
+        return LLMPersonaIdentity(
+            name=f"mock_persona_identity_{cls._random_uuid_hex()}",
+            user_id=None,
         )

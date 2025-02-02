@@ -154,7 +154,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         :param body: MQ message body containing persona data for update
         """
         with self._persona_update_lock:
-            self._personas_provider.apply_incoming_persona(body)
+            self._personas_provider.apply_persona_data(persona_data=body)
 
     @create_mq_callback()
     def handle_persona_delete(self, body: dict):

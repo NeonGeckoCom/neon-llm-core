@@ -100,4 +100,3 @@ class TestPersonaHandlersState(unittest.TestCase):
         self.persona_handlers_state.remove_persona("persona_1")
         mock_item.stop.assert_called_once()
         self.assertNotIn("persona_1", self.persona_handlers_state._created_items)
-

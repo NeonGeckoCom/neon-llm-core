@@ -74,31 +74,44 @@ class TestPersonasProvider(unittest.TestCase):
         self.assertIsNotNone(persona)
         self.assertEqual(persona.name, persona_data['name'])
 
-    def test__validate_persona_data_failure(self):
+    def test__validate_persona_data_returns_None_on_failure(self):
         persona_data = {}
         persona = self.provider._validate_persona_data(persona_data)
 
         self.assertIsNone(persona)
 
+    def test__validate_persona_identity_success(self):
+        persona_identity = PersonaFactory.create_mock_persona_identity().model_dump()
+        persona = self.provider._validate_persona_identity(persona_identity)
+
+        self.assertIsNotNone(persona)
+        self.assertEqual(persona.name, persona_identity['name'])
+
+    def test__validate_persona_identity_returns_None_on_failure(self):
+        persona_identity_data = {}
+        persona_identity = self.provider._validate_persona_identity(persona_identity_data)
+
+        self.assertIsNone(persona_identity)
+
     @patch.object(PersonaHandlersState, "add_persona_handler")
-    def test_apply_incoming_persona_success(self, mock_add_persona_handler):
+    def test__add_persona_success(self, mock_add_persona_handler):
         mock_add_persona_handler.return_value = True
         persona = Mock(id="mock_persona")
 
-        result = self.provider.apply_incoming_persona(persona)
+        result = self.provider._add_persona(persona)
 
         self.assertTrue(result)
         mock_add_persona_handler.assert_called_once_with(persona=persona)
 
     @patch("neon_llm_core.utils.personas.state.LLMBot")
-    def test_apply_incoming_persona_when_default_personas_are_running(self, mock_llm_bot):
+    def test__add_persona_when_default_personas_are_running(self, mock_llm_bot):
         persona = PersonaFactory.create_mock_llm_persona(enabled=True)
 
         self.provider._persona_handlers_state.init_default_personas()
         self.assertEqual(self.provider._persona_handlers_state.connected_persona_ids,
                          [persona.id for persona in self.mock_config['llm_bots'][self.mock_service_name]])
 
-        result = self.provider.apply_incoming_persona(persona)
+        result = self.provider._add_persona(persona)
         self.assertTrue(result)
 
         # Defaults personas eliminated
@@ -106,14 +119,14 @@ class TestPersonasProvider(unittest.TestCase):
                          [persona.id])
 
     @patch("neon_llm_core.utils.personas.state.LLMBot")
-    def test_apply_disabled_incoming_persona_when_default_personas_are_running(self, mock_llm_bot):
+    def test__add_disabled_persona_when_default_personas_are_running(self, mock_llm_bot):
         persona = PersonaFactory.create_mock_llm_persona(enabled=False)
 
         self.provider._persona_handlers_state.init_default_personas()
         self.assertEqual(self.provider._persona_handlers_state.connected_persona_ids,
                          [persona.id for persona in self.mock_config['llm_bots'][self.mock_service_name]])
 
-        result = self.provider.apply_incoming_persona(persona)
+        result = self.provider._add_persona(persona)
         self.assertFalse(result)
 
         # Defaults personas stay as is
@@ -124,7 +137,7 @@ class TestPersonasProvider(unittest.TestCase):
     def test_disable_latest_persona_should_activate_default_personas(self, mock_llm_bot):
         persona = PersonaFactory.create_mock_llm_persona(enabled=True)
 
-        self.provider.apply_incoming_persona(persona)
+        self.provider._add_persona(persona)
 
         # Persona is connected
         self.assertEqual(self.provider._persona_handlers_state.connected_persona_ids,
@@ -132,7 +145,7 @@ class TestPersonasProvider(unittest.TestCase):
 
         persona.enabled = False
 
-        self.provider.apply_incoming_persona(persona)
+        self.provider._add_persona(persona)
 
         # Persona is disconnected and default personas are initialised
         self.assertEqual(self.provider._persona_handlers_state.connected_persona_ids,
