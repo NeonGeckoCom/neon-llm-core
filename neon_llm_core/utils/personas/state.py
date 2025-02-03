@@ -26,46 +26,78 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import time
-from typing import Dict, Union, List
+from functools import cached_property
+from threading import Lock
+from typing import Dict, List, Optional
 
+from neon_data_models.models.api.llm import LLMPersona
 from neon_utils.logger import LOG
-
 from neon_llm_core.chatbot import LLMBot
-from neon_llm_core.utils.personas.models import PersonaModel
 
 
 class PersonaHandlersState:
+    """
+    This works with the PersonasProvider object to manage LLMBot instances for
+    all configured personas.
+    """
 
     def __init__(self, service_name: str, ovos_config: dict):
         self._created_items: Dict[str, LLMBot] = {}
         self.service_name = service_name
         self.ovos_config = ovos_config
         self.mq_config = ovos_config.get('MQ', {})
+        self.default_personas_running = False
 
-    def init_default_handlers(self):
-        self._created_items = {}
-        if self.ovos_config.get("llm_bots", {}).get(self.service_name):
-            LOG.info(f"Chatbot(s) configured for: {self.service_name}")
-            for persona in self.ovos_config['llm_bots'][self.service_name]:
-                self.add_persona_handler(persona=PersonaModel.parse_obj(obj=persona))
+        self.personas_clean_up_lock = Lock()
+        self.personas_remove_lock = Lock()
 
-    def add_persona_handler(self, persona: PersonaModel) -> Union[LLMBot, None]:
+    @cached_property
+    def default_personas(self):
+        return self.ovos_config.get("llm_bots", {}).get(self.service_name, [])
+
+    @property
+    def connected_persona_ids(self) -> List[str]:
+        return list(self._created_items)
+
+    def has_connected_personas(self) -> bool:
+        return bool(self._created_items)
+
+    def init_default_personas(self):
+        """
+        Initializes LLMBot instances for all personas defined in configuration.
+        """
+        if self.default_personas and not self.default_personas_running:
+            self.clean_up_personas()
+            LOG.info(f"Initializing default personas for: {self.service_name}")
+            for persona in self.default_personas:
+                self.add_persona_handler(
+                    persona=LLMPersona.model_validate(obj=persona)
+                )
+            self.default_personas_running = True
+        else:
+            if self.default_personas_running:
+                LOG.debug('Default personas already running')
+            elif not self.default_personas:
+                LOG.warning('Default personas not configured')
+
+    def add_persona_handler(self, persona: LLMPersona) -> Optional[LLMBot]:
+        """
+        Creates an `LLMBot` instance for the given persona if the persona does
+        not yet exist AND the persona is not disabled in configuration.
+        :param persona: Persona definition to generate an LLMBot instance of
+        :return: New or existing LLMBot instance or None if the persona is
+                 disabled
+        """
         persona_dict = persona.model_dump()
         if persona.id in list(self._created_items):
             if self._created_items[persona.id].persona != persona_dict:
-                LOG.warning(f"Overriding already existing persona: '{persona.id}' with new data={persona}")
-                try:
-                    self._created_items[persona.id].stop()
-                    # time to gracefully stop the submind
-                    time.sleep(0.5)
-                except Exception as ex:
-                    LOG.warning(f'Failed to gracefully stop {persona.id}, ex={str(ex)}')
+                LOG.info(f"Received new data for persona: '{persona.id}' - removing old instance")
+                self.remove_persona(persona_id=persona.id)
             else:
                 LOG.debug('Persona config provided is identical to existing, skipping')
-                return self._created_items[persona.id]
+                return
         if not persona.enabled:
-            LOG.warning(f"Persona disabled: '{persona.id}'")
+            LOG.warning(f"Skipping disabled persona: '{persona.id}'")
             return
         # Get a configured username to use for LLM submind connections
         persona_id = f"{persona.id}_{self.service_name}"
@@ -78,14 +110,20 @@ class PersonaHandlersState:
         self._created_items[persona.id] = bot
         return bot
 
-    def clean_up_personas(self, ignore_items: List[PersonaModel] = None):
-        connected_personas = set(self._created_items)
-        ignored_persona_ids = set(persona.id for persona in ignore_items or [])
-        personas_to_remove = connected_personas - ignored_persona_ids
-        for persona_id in personas_to_remove:
-            self.remove_persona(persona_id=persona_id)
+    def clean_up_personas(self, ignore_items: List[LLMPersona] = None):
+        with self.personas_clean_up_lock:
+            connected_personas = set(self._created_items)
+            ignored_persona_ids = set(persona.id for persona in ignore_items or [])
+            personas_to_remove = connected_personas - ignored_persona_ids
+            for persona_id in personas_to_remove:
+                self.remove_persona(persona_id=persona_id)
 
     def remove_persona(self, persona_id: str):
-        LOG.info(f'Removing persona_id = {persona_id}')
-        self._created_items[persona_id].stop()
-        self._created_items.pop(persona_id, None)
+        with self.personas_remove_lock:
+            if persona_id in self._created_items:
+                try:
+                    LOG.info(f'Removing persona_id = {persona_id}')
+                    self._created_items[persona_id].stop()
+                    self._created_items.pop(persona_id, None)
+                except Exception as ex:
+                    LOG.warning(f'Failed to gracefully stop persona={persona_id!r}, ex={str(ex)}')

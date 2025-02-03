@@ -3,4 +3,4 @@ neon-mq-connector>=0.7.2a17
 neon_utils[sentry]~=1.12
 ovos-config~=0.0,>=0.0.10
 pydantic~=2.6
-neon-data-models>=0.0.0a5
+neon-data-models>=0.0.0a8

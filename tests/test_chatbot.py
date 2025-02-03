@@ -27,9 +27,15 @@ from datetime import datetime
 from unittest import TestCase
 from unittest.mock import patch
 
-from neon_data_models.models.api import LLMPersona, LLMProposeRequest, \
-    LLMProposeResponse, LLMDiscussRequest, LLMDiscussResponse, LLMVoteRequest, \
-    LLMVoteResponse
+from neon_data_models.models.api import (
+    LLMPersona,
+    LLMProposeRequest,
+    LLMProposeResponse,
+    LLMDiscussRequest,
+    LLMDiscussResponse,
+    LLMVoteRequest,
+    LLMVoteResponse,
+)
 
 from neon_llm_core.chatbot import LLMBot
 from neon_llm_core.utils.config import LLMMQConfig

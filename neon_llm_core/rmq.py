@@ -25,15 +25,19 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from abc import abstractmethod, ABC
-from threading import Thread
+from threading import Thread, Lock
+from time import time
 from typing import Optional
 
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
-from neon_data_models.models.api.mq import (LLMProposeResponse,
-                                            LLMDiscussResponse, LLMVoteResponse)
+from neon_data_models.models.api.mq import (
+    LLMProposeResponse,
+    LLMDiscussResponse,
+    LLMVoteResponse,
+)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
@@ -59,6 +63,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self.register_consumers()
         self._model = None
         self._bots = list()
+        self._persona_update_lock = Lock()
+        self._last_persona_update = time()
         self._personas_provider = PersonasProvider(service_name=self.name,
                                                    ovos_config=self.ovos_config)
 
@@ -79,7 +85,17 @@ class NeonLLMMQConnector(MQConnector, ABC):
                                queue=self.queue_opinion,
                                callback=self.handle_opinion_request,
                                on_error=self.default_error_handler,)
-    
+        self.register_subscriber(name=f'neon_llm_{self.name}_update_persona',
+                                 vhost=self.vhost,
+                                 exchange=self.exchange_persona_updated,
+                                 callback=self.handle_persona_update,
+                                 on_error=self.default_error_handler)
+        self.register_subscriber(name=f'neon_llm_{self.name}_delete_persona',
+                                 vhost=self.vhost,
+                                 exchange=self.exchange_persona_deleted,
+                                 callback=self.handle_persona_delete,
+                                 on_error=self.default_error_handler)
+
     @property
     @abstractmethod
     def name(self):
@@ -105,6 +121,14 @@ class NeonLLMMQConnector(MQConnector, ABC):
         return f"{self.name}_discussion_input"
 
     @property
+    def exchange_persona_updated(self):
+        return f"{self.name}_persona_updated"
+
+    @property
+    def exchange_persona_deleted(self):
+        return f"{self.name}_persona_deleted"
+
+    @property
     @abstractmethod
     def model(self) -> NeonLLM:
         pass
@@ -121,6 +145,26 @@ class NeonLLMMQConnector(MQConnector, ABC):
                    daemon=True)
         t.start()
         return t
+
+    @create_mq_callback()
+    def handle_persona_update(self, body: dict):
+        """
+        Handles an emitted message from the server containing updated persona data
+        for this LLM
+        :param body: MQ message body containing persona data for update
+        """
+        with self._persona_update_lock:
+            self._personas_provider.apply_persona_data(persona_data=body)
+
+    @create_mq_callback()
+    def handle_persona_delete(self, body: dict):
+        """
+        Handles an emitted message from the server containing deleted persona data
+        for this LLM
+        :param body: MQ message body containing persona data for deletion
+        """
+        with self._persona_update_lock:
+            self._personas_provider.remove_persona(body)
 
     def _handle_request_async(self, request: dict):
         message_id = request["message_id"]
