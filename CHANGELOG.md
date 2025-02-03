@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.1a11](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a11) (2025-02-03)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a10...0.1.1a11)
+
+**Implemented enhancements:**
+
+- \[FEAT\] Event-driven persona updates [\#8](https://github.com/NeonGeckoCom/neon-llm-core/issues/8)
+
+**Merged pull requests:**
+
+- Handle Klat persona update events [\#10](https://github.com/NeonGeckoCom/neon-llm-core/pull/10) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a10](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a10) (2025-01-23)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a9...0.1.1a10)
