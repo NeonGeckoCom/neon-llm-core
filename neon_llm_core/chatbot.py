@@ -155,13 +155,13 @@ class LLMBot(ChatBot):
         :returns response data from LLM API
         """
         queue = self.mq_queue_config.ask_discusser_queue
-        request_data = LLMDiscussRequest(model=self.base_llm,
-                                         persona=self.persona,
-                                         query=prompt,
-                                         options=options,
-                                         history=[],
-                                         message_id="")
         try:
+            request_data = LLMDiscussRequest(model=self.base_llm,
+                                             persona=self.persona,
+                                             query=prompt,
+                                             options=options,
+                                             history=[],
+                                             message_id="")
             resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
