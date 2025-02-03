@@ -37,7 +37,6 @@ from neon_data_models.models.api.mq import (
 from neon_mq_connector.utils.client_utils import send_mq_request
 from neon_utils.logger import LOG
 from neon_data_models.models.api.llm import LLMPersona
-from pydantic import ValidationError
 
 from neon_llm_core.utils.config import LLMMQConfig
 from neon_llm_core.utils.constants import DEFAULT_RESPONSE, DEFAULT_VOTE
