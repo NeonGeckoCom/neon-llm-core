@@ -142,7 +142,7 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=f"{queue}.response")
-            return LLMProposeResponse.model_validate(resp_data)
+            return LLMProposeResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
                           f"{self.mq_queue_config.vhost}/{queue}: {e}")
