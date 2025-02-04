@@ -151,6 +151,7 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            LOG.info(f"Got response for persona={self.persona}")
             return LLMProposeResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
