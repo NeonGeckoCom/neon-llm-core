@@ -173,7 +173,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         query = request["query"]
         history = request["history"]
         persona = request.get("persona", {})
-
+        LOG.debug(f"Request persona={persona}|key={routing_key}")
         try:
             response = self.model.ask(message=query, chat_history=history,
                                       persona=persona)

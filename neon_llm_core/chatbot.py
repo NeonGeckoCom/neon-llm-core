@@ -25,6 +25,8 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from typing import List, Optional
+from uuid import uuid4
+
 from chatbot_core.v2 import ChatBot
 from neon_data_models.models.api.mq import (
     LLMProposeRequest,
@@ -83,6 +85,9 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :param context: message context
         """
+        if not options:
+            LOG.error(f"No options provided: options={options}")
+            return DEFAULT_RESPONSE
         options = {k: v for k, v in options.items() if k != self.service_name}
         prompt_id = context.get('prompt_id') if context else None
         prompt_sentence = None
@@ -101,6 +106,10 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :param context: message context
         """
+        if not options:
+            LOG.error(f"No options provided: options={options}")
+            return DEFAULT_VOTE
+
         # Determine the relevant prompt
         prompt_id = context.get('prompt_id') if context else None
         prompt_sentence = None
@@ -118,6 +127,14 @@ class LLMBot(ChatBot):
             answer_data = self._get_llm_api_choice(prompt=prompt_sentence,
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
+            if not answer_data:
+                LOG.error("No response to vote request")
+                return DEFAULT_VOTE
+            if len(answer_data.sorted_answer_indexes) != len(bots):
+                LOG.error(f"Invalid vote response! "
+                          f"input_responses={bot_responses}|"
+                          f"response_idxs={answer_data.sorted_answer_indexes}")
+                return DEFAULT_VOTE
             if answer_data and answer_data.sorted_answer_indexes:
                 return bots[answer_data.sorted_answer_indexes[0]]
         return DEFAULT_VOTE
@@ -129,9 +146,11 @@ class LLMBot(ChatBot):
         :returns response from LLM API
         """
         queue = self.mq_queue_config.ask_response_queue
+        response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
+            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
+                     f"persona={self.persona}")
 
             request_data = LLMProposeRequest(model=self.base_llm,
                                              persona=self.persona,
@@ -141,7 +160,8 @@ class LLMBot(ChatBot):
             resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
-                                        response_queue=f"{queue}.response")
+                                        response_queue=response_queue)
+            LOG.info(f"Got response for persona={self.persona}")
             return LLMProposeResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
@@ -155,6 +175,7 @@ class LLMBot(ChatBot):
         :returns response data from LLM API
         """
         queue = self.mq_queue_config.ask_discusser_queue
+        response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
@@ -168,7 +189,7 @@ class LLMBot(ChatBot):
             resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
-                                        response_queue=f"{queue}.response")
+                                        response_queue=response_queue)
             return LLMDiscussResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
@@ -183,6 +204,7 @@ class LLMBot(ChatBot):
         :returns response data from LLM API
         """
         queue = self.mq_queue_config.ask_appraiser_queue
+        response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
@@ -196,7 +218,7 @@ class LLMBot(ChatBot):
             resp_data = send_mq_request(vhost=self.mq_queue_config.vhost,
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
-                                        response_queue=f"{queue}.response")
+                                        response_queue=response_queue)
             return LLMVoteResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
