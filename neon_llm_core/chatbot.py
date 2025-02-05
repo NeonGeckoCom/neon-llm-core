@@ -127,6 +127,9 @@ class LLMBot(ChatBot):
             answer_data = self._get_llm_api_choice(prompt=prompt_sentence,
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
+            if not answer_data:
+                LOG.error("No response to vote request")
+                return DEFAULT_VOTE
             if len(answer_data.sorted_answer_indexes) != len(bots):
                 LOG.error(f"Invalid vote response! "
                           f"input_responses={bot_responses}|"
