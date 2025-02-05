@@ -85,6 +85,9 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :param context: message context
         """
+        if not options:
+            LOG.error(f"No options provided: options={options}")
+            return DEFAULT_RESPONSE
         options = {k: v for k, v in options.items() if k != self.service_name}
         prompt_id = context.get('prompt_id') if context else None
         prompt_sentence = None
@@ -103,6 +106,10 @@ class LLMBot(ChatBot):
         :param options: proposed responses (botname: response)
         :param context: message context
         """
+        if not options:
+            LOG.error(f"No options provided: options={options}")
+            return DEFAULT_VOTE
+
         # Determine the relevant prompt
         prompt_id = context.get('prompt_id') if context else None
         prompt_sentence = None
