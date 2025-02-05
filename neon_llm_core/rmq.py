@@ -187,7 +187,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         LOG.info(f"Sending response: {response}")
         self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
-        LOG.debug(f"Handled ask request for message_id={message_id}")
+        LOG.info(f"Handled ask request for message_id={message_id}")
 
     # TODO: Refactor score and opinion to work async like request
     @create_mq_callback()
