@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a12](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a12) (2025-02-05)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a11...0.1.1a12)
+
+**Merged pull requests:**
+
+- Fix response routing and improve exception handling [\#17](https://github.com/NeonGeckoCom/neon-llm-core/pull/17) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a11](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a11) (2025-02-03)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a10...0.1.1a11)
