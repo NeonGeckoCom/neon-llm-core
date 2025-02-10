@@ -1,1 +1,1 @@
-neon-chatbot-core
+neon-chatbot-core~=2.4
