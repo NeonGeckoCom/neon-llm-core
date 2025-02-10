@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a13](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a13) (2025-02-10)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a12...0.1.1a13)
+
+**Merged pull requests:**
+
+- Update Dependencies [\#18](https://github.com/NeonGeckoCom/neon-llm-core/pull/18) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a12](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a12) (2025-02-05)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a11...0.1.1a12)
