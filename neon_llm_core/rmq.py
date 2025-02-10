@@ -279,12 +279,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
         """
         pass
 
-    def run(self, run_consumers: bool = True, run_sync: bool = True,
-            run_observer: bool = True, **kwargs):
-        super().run(run_consumers=run_consumers,
-                    run_sync=run_sync,
-                    run_observer=run_observer,
-                    **kwargs)
+    def run(self, run_consumers: bool = True, run_sync: bool = False,
+            run_observer: Optional[bool] = None, **kwargs):
+        MQConnector.run(self, run_consumers=run_consumers, run_sync=run_sync,
+                        run_observer=run_observer, **kwargs)
         if not self.started:
             raise RuntimeError(f'Failed to connect to MQ. config={self.config}')
         self._personas_provider.start_sync()
