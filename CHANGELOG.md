@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a14](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a14) (2025-02-11)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a13...0.1.1a14)
+
+**Merged pull requests:**
+
+- Default disable sync thread and update obsserver thread behavior [\#19](https://github.com/NeonGeckoCom/neon-llm-core/pull/19) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a13](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a13) (2025-02-10)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a12...0.1.1a13)
