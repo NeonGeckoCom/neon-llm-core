@@ -149,6 +149,7 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
+            # TODO This is logged 1x per persona
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
                      f"persona={self.persona}")
 
@@ -178,7 +179,8 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
+            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
+                     f"persona={self.persona}")
 
             request_data = LLMDiscussRequest(model=self.base_llm,
                                              persona=self.persona,
@@ -211,7 +213,8 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.debug(f"Sending to {self.mq_queue_config.vhost}/{queue}")
+            LOG.debug(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
+                      f"persona={self.persona}")
 
             request_data = LLMVoteRequest(model=self.base_llm,
                                           persona=self.persona,
