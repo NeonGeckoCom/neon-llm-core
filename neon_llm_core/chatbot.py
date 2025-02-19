@@ -211,7 +211,7 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
+            LOG.debug(f"Sending to {self.mq_queue_config.vhost}/{queue}")
 
             request_data = LLMVoteRequest(model=self.base_llm,
                                           persona=self.persona,
