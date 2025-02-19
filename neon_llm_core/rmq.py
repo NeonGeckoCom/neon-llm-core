@@ -147,6 +147,32 @@ class NeonLLMMQConnector(MQConnector, ABC):
         return t
 
     @create_mq_callback()
+    def handle_score_request(self, body: dict):
+        """
+        Handles score requests (vote) from MQ to LLM
+        :param body: request body (dict)
+        """
+        # Handle this asynchronously so multiple subminds can be handled
+        # concurrently
+        t = Thread(target=self._handle_score_async, args=(body,),
+                   daemon=True)
+        t.start()
+        return t
+
+    @create_mq_callback()
+    def handle_opinion_request(self, body: dict):
+        """
+        Handles opinion requests (discuss) from MQ to LLM
+        :param body: request body (dict)
+        """
+        # Handle this asynchronously so multiple subminds can be handled
+        # concurrently
+        t = Thread(target=self._handle_opinion_async, args=(body,),
+                   daemon=True)
+        t.start()
+        return t
+
+    @create_mq_callback()
     def handle_persona_update(self, body: dict):
         """
         Handles an emitted message from the server containing updated persona data
@@ -184,14 +210,12 @@ class NeonLLMMQConnector(MQConnector, ABC):
         api_response = LLMProposeResponse(message_id=message_id,
                                           response=response,
                                           routing_key=routing_key)
-        LOG.info(f"Sending response: {response}")
+        LOG.debug(f"Sending response: {response}")
         self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
-        LOG.info(f"Handled ask request for message_id={message_id}")
+        LOG.info(f"Handled ask request for query={query}")
 
-    # TODO: Refactor score and opinion to work async like request
-    @create_mq_callback()
-    def handle_score_request(self, body: dict):
+    def _handle_score_async(self, body: dict):
         """
         Handles score requests (vote) from MQ to LLM
         :param body: request body (dict)
@@ -218,10 +242,9 @@ class NeonLLMMQConnector(MQConnector, ABC):
                                        sorted_answer_indexes=sorted_answer_idx)
         self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
-        LOG.info(f"Handled score request for message_id={message_id}")
+        LOG.info(f"Handled score request for query={query}")
 
-    @create_mq_callback()
-    def handle_opinion_request(self, body: dict):
+    def _handle_opinion_async(self, body: dict):
         """
         Handles opinion requests (discuss) from MQ to LLM
         :param body: request body (dict)
@@ -255,7 +278,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
                                           opinion=opinion)
         self.send_message(request_data=api_response.model_dump(),
                           queue=routing_key)
-        LOG.info(f"Handled ask request for message_id={message_id}")
+        LOG.info(f"Handled discuss request for query={query}")
 
     def _ask_model_for_opinion(self, respondent_nick: str, question: str,
                                answer: str, persona: dict) -> str:

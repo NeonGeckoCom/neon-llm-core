@@ -190,9 +190,13 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            if not resp_data:
+                LOG.error(f"Timed out waiting for response on "
+                          f"{self.mq_queue_config.vhost}/{queue}")
+                return None
             return LLMDiscussResponse.model_validate(obj=resp_data)
         except Exception as e:
-            LOG.exception(f"Failed to get response on "
+            LOG.exception(f"Error getting response on "
                           f"{self.mq_queue_config.vhost}/{queue}: {e}")
 
     def _get_llm_api_choice(self, prompt: str,
