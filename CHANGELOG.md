@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a15](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a15) (2025-02-20)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a14...0.1.1a15)
+
+**Merged pull requests:**
+
+- Update async handling and logging to address Sentry Errors [\#20](https://github.com/NeonGeckoCom/neon-llm-core/pull/20) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a14](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a14) (2025-02-11)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a13...0.1.1a14)
