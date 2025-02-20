@@ -175,7 +175,7 @@ class TestNeonLLMMQConnector(TestCase):
                                     options={"bot 1": "resp 1",
                                              "bot 2": "resp 2"})
         self.mq_llm.handle_opinion_request(None, None, None,
-                                           dict_to_b64(request.model_dump()))
+                                           dict_to_b64(request.model_dump())).join()
 
         self.mq_llm._compose_opinion_prompt.assert_called_with(
             list(request.options.keys())[0], request.query,
@@ -196,7 +196,7 @@ class TestNeonLLMMQConnector(TestCase):
                                     query="Mock Discuss 1", history=[],
                                     options={})
         self.mq_llm.handle_opinion_request(None, None, None,
-                                           dict_to_b64(request.model_dump()))
+                                           dict_to_b64(request.model_dump())).join()
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)
         response = LLMDiscussResponse(**response['request_data'])
@@ -217,7 +217,7 @@ class TestNeonLLMMQConnector(TestCase):
                                  query="Mock Score", history=[],
                                  responses=["one", "two"])
         self.mq_llm.handle_score_request(None, None, None,
-                                         dict_to_b64(request.model_dump()))
+                                         dict_to_b64(request.model_dump())).join()
 
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)
@@ -234,7 +234,7 @@ class TestNeonLLMMQConnector(TestCase):
                                  routing_key="mock_routing_key",
                                  query="Mock Score", history=[], responses=[])
         self.mq_llm.handle_score_request(None, None, None,
-                                         dict_to_b64(request.model_dump()))
+                                         dict_to_b64(request.model_dump())).join()
 
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)

@@ -147,7 +147,6 @@ class LLMBot(ChatBot):
         """
         queue = self.mq_queue_config.ask_response_queue
         response_queue = f"{queue}.response.{uuid4().hex}"
-
         try:
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
                      f"persona={self.persona}")
@@ -161,6 +160,10 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            if not resp_data:
+                LOG.error(f"Timed out waiting for response on "
+                          f"{response_queue}")
+                return None
             LOG.info(f"Got response for persona={self.persona}")
             return LLMProposeResponse.model_validate(obj=resp_data)
         except Exception as e:
@@ -178,7 +181,8 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
+            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
+                     f"persona={self.persona}")
 
             request_data = LLMDiscussRequest(model=self.base_llm,
                                              persona=self.persona,
@@ -190,9 +194,13 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            if not resp_data:
+                LOG.error(f"Timed out waiting for response on "
+                          f"{response_queue}")
+                return None
             return LLMDiscussResponse.model_validate(obj=resp_data)
         except Exception as e:
-            LOG.exception(f"Failed to get response on "
+            LOG.exception(f"Error getting response on "
                           f"{self.mq_queue_config.vhost}/{queue}: {e}")
 
     def _get_llm_api_choice(self, prompt: str,
@@ -207,7 +215,8 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue}")
+            LOG.debug(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
+                      f"persona={self.persona}")
 
             request_data = LLMVoteRequest(model=self.base_llm,
                                           persona=self.persona,
@@ -219,6 +228,10 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            if not resp_data:
+                LOG.error(f"Timed out waiting for response on "
+                          f"{response_queue}")
+                return None
             return LLMVoteResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
