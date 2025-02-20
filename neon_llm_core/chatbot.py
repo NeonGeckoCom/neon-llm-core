@@ -147,9 +147,7 @@ class LLMBot(ChatBot):
         """
         queue = self.mq_queue_config.ask_response_queue
         response_queue = f"{queue}.response.{uuid4().hex}"
-
         try:
-            # TODO This is logged 1x per persona
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
                      f"persona={self.persona}")
 
@@ -162,6 +160,10 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            if not resp_data:
+                LOG.error(f"Timed out waiting for response on "
+                          f"{response_queue}")
+                return None
             LOG.info(f"Got response for persona={self.persona}")
             return LLMProposeResponse.model_validate(obj=resp_data)
         except Exception as e:
@@ -194,7 +196,7 @@ class LLMBot(ChatBot):
                                         response_queue=response_queue)
             if not resp_data:
                 LOG.error(f"Timed out waiting for response on "
-                          f"{self.mq_queue_config.vhost}/{queue}")
+                          f"{response_queue}")
                 return None
             return LLMDiscussResponse.model_validate(obj=resp_data)
         except Exception as e:
@@ -226,6 +228,10 @@ class LLMBot(ChatBot):
                                         request_data=request_data.model_dump(),
                                         target_queue=queue,
                                         response_queue=response_queue)
+            if not resp_data:
+                LOG.error(f"Timed out waiting for response on "
+                          f"{response_queue}")
+                return None
             return LLMVoteResponse.model_validate(obj=resp_data)
         except Exception as e:
             LOG.exception(f"Failed to get response on "
