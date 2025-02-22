@@ -149,7 +149,7 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
         try:
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
-                     f"persona={self.persona}")
+                     f"persona={self.persona.name}|response_q={response_queue}")
 
             request_data = LLMProposeRequest(model=self.base_llm,
                                              persona=self.persona,
@@ -182,7 +182,7 @@ class LLMBot(ChatBot):
 
         try:
             LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
-                     f"persona={self.persona}")
+                     f"persona={self.persona.name}|response_q={response_queue}")
 
             request_data = LLMDiscussRequest(model=self.base_llm,
                                              persona=self.persona,
@@ -215,8 +215,8 @@ class LLMBot(ChatBot):
         response_queue = f"{queue}.response.{uuid4().hex}"
 
         try:
-            LOG.debug(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
-                      f"persona={self.persona}")
+            LOG.info(f"Sending to {self.mq_queue_config.vhost}/{queue} for "
+                     f"persona={self.persona.name}|response_q={response_queue}")
 
             request_data = LLMVoteRequest(model=self.base_llm,
                                           persona=self.persona,

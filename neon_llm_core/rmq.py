@@ -236,6 +236,9 @@ class NeonLLMMQConnector(MQConnector, ABC):
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 sorted_answer_idx = []
+            except Exception as e:
+                LOG.exception(e)
+                sorted_answer_idx = []
 
         api_response = LLMVoteResponse(message_id=message_id,
                                        routing_key=routing_key,
