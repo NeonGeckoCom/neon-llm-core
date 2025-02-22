@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a16](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a16) (2025-02-22)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a15...0.1.1a16)
+
+**Merged pull requests:**
+
+- Handle voting exceptions to prevent more errors in handlers [\#21](https://github.com/NeonGeckoCom/neon-llm-core/pull/21) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a15](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a15) (2025-02-20)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a14...0.1.1a15)
