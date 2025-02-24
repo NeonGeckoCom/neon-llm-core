@@ -128,7 +128,7 @@ class LLMBot(ChatBot):
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
             if not answer_data:
-                LOG.error("No response to vote request")
+                LOG.warning("No response to vote request")
                 return DEFAULT_VOTE
             if len(answer_data.sorted_answer_indexes) != len(bots):
                 LOG.error(f"Invalid vote response! "
@@ -161,8 +161,8 @@ class LLMBot(ChatBot):
                                         target_queue=queue,
                                         response_queue=response_queue)
             if not resp_data:
-                LOG.error(f"Timed out waiting for response on "
-                          f"{response_queue}")
+                LOG.warning(f"Timed out waiting for response on "
+                            f"{response_queue}")
                 return None
             LOG.info(f"Got response for persona={self.persona}")
             return LLMProposeResponse.model_validate(obj=resp_data)
@@ -195,8 +195,8 @@ class LLMBot(ChatBot):
                                         target_queue=queue,
                                         response_queue=response_queue)
             if not resp_data:
-                LOG.error(f"Timed out waiting for response on "
-                          f"{response_queue}")
+                LOG.warning(f"Timed out waiting for response on "
+                            f"{response_queue}")
                 return None
             return LLMDiscussResponse.model_validate(obj=resp_data)
         except Exception as e:
@@ -229,8 +229,8 @@ class LLMBot(ChatBot):
                                         target_queue=queue,
                                         response_queue=response_queue)
             if not resp_data:
-                LOG.error(f"Timed out waiting for response on "
-                          f"{response_queue}")
+                LOG.warning(f"Timed out waiting for response on "
+                            f"{response_queue}")
                 return None
             return LLMVoteResponse.model_validate(obj=resp_data)
         except Exception as e:
