@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a17](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a17) (2025-02-25)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a16...0.1.1a17)
+
+**Merged pull requests:**
+
+- Update logging so Sentry only logs once instead of 3x for voting errors [\#22](https://github.com/NeonGeckoCom/neon-llm-core/pull/22) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a16](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a16) (2025-02-22)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a15...0.1.1a16)
