@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a18](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a18) (2025-02-25)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a17...0.1.1a18)
+
+**Merged pull requests:**
+
+- Update logging and appraiser error handling [\#23](https://github.com/NeonGeckoCom/neon-llm-core/pull/23) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a17](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a17) (2025-02-25)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a16...0.1.1a17)
