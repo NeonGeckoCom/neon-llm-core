@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1a19](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a19) (2025-02-25)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a18...0.1.1a19)
+
+**Merged pull requests:**
+
+- Handle model exceptions with default responses [\#24](https://github.com/NeonGeckoCom/neon-llm-core/pull/24) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.1.1a18](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.1.1a18) (2025-02-25)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.1.1a17...0.1.1a18)
