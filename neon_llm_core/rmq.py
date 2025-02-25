@@ -200,13 +200,16 @@ class NeonLLMMQConnector(MQConnector, ABC):
         history = request["history"]
         persona = request.get("persona", {})
         LOG.debug(f"Request persona={persona}|key={routing_key}")
+        # Default response if the model fails to respond
+        response = 'Sorry, but I cannot respond to your message at the '\
+                   'moment; please, try again later'
         try:
             response = self.model.ask(message=query, chat_history=history,
                                       persona=persona)
         except ValueError as err:
             LOG.error(f'ValueError={err}')
-            response = ('Sorry, but I cannot respond to your message at the '
-                        'moment, please try again later')
+        except Exception as e:
+            LOG.exception(e)
         api_response = LLMProposeResponse(message_id=message_id,
                                           response=response,
                                           routing_key=routing_key)
