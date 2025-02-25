@@ -123,7 +123,7 @@ class LLMBot(ChatBot):
         if prompt_sentence and options:
             bots = list(options)
             bot_responses = list(options.values())
-            LOG.info(f'bots={bots}, answers={bot_responses}')
+            LOG.info(f'bots={bots}, len(bot_responses)={len(bot_responses)}')
             answer_data = self._get_llm_api_choice(prompt=prompt_sentence,
                                                    responses=bot_responses)
             LOG.info(f'Received answer_data={answer_data}')
@@ -132,7 +132,7 @@ class LLMBot(ChatBot):
                 return DEFAULT_VOTE
             if len(answer_data.sorted_answer_indexes) != len(bots):
                 LOG.error(f"Invalid vote response! "
-                          f"input_responses={bot_responses}|"
+                          f"len(bot_responses)={len(bot_responses)}|"
                           f"response_idxs={answer_data.sorted_answer_indexes}")
                 return DEFAULT_VOTE
             if answer_data and answer_data.sorted_answer_indexes:

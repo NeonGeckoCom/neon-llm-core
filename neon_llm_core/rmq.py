@@ -263,6 +263,9 @@ class NeonLLMMQConnector(MQConnector, ABC):
         if not responses:
             opinion = "Sorry, but I got no options to choose from."
         else:
+            # Default opinion if the model fails to respond
+            opinion = "Sorry, but I experienced an issue trying to form "\
+                      "an opinion on this topic"
             try:
                 sorted_answer_indexes = self.model.get_sorted_answer_indexes(
                     question=query, answers=responses, persona=persona)
@@ -273,8 +276,11 @@ class NeonLLMMQConnector(MQConnector, ABC):
                     question=query, answer=best_response, persona=persona)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
-                opinion = ("Sorry, but I experienced an issue trying to form "
-                           "an opinion on this topic")
+            except IndexError as err:
+                # Failed response will return an empty list
+                LOG.error(f'IndexError={err}')
+            except Exception as e:
+                LOG.exception(e)
 
         api_response = LLMDiscussResponse(message_id=message_id,
                                           routing_key=routing_key,
