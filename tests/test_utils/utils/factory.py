@@ -1,9 +1,7 @@
-# NEON AI (TM) SOFTWARE, Software Development Kit & Application Framework
+# NEON AI (TM) SOFTWARE, Software Development Kit & Application Development System
 # All trademark and other rights reserved by their respective owners
-# Copyright 2008-2025 Neongecko.com Inc.
-# Contributors: Daniel McKnight, Guy Daniels, Elon Gasper, Richard Leeds,
-# Regina Bloomstine, Casimiro Ferreira, Andrii Pernatii, Kirill Hrymailo
-# BSD-3 License
+# Copyright 2008-2025 NeonGecko.com Inc.
+# BSD-3
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
 # 1. Redistributions of source code must retain the above copyright notice,
@@ -26,4 +24,30 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-__version__ = "0.2.0"
+import uuid
+
+from neon_data_models.models import LLMPersona, LLMPersonaIdentity
+
+
+class PersonaFactory:
+
+    @staticmethod
+    def _random_uuid_hex() -> str:
+        return uuid.uuid4().hex
+
+    @classmethod
+    def create_mock_llm_persona(cls, enabled: bool = False):
+        return LLMPersona(
+            name=f"mock_persona_{cls._random_uuid_hex()}",
+            user_id=None,
+            description=f"Mock Persona {cls._random_uuid_hex()}",
+            system_prompt=f"Mock Prompt: {cls._random_uuid_hex()}",
+            enabled=enabled,
+        )
+
+    @classmethod
+    def create_mock_persona_identity(cls):
+        return LLMPersonaIdentity(
+            name=f"mock_persona_identity_{cls._random_uuid_hex()}",
+            user_id=None,
+        )

@@ -1,0 +1,1 @@
+neon-chatbot-core~=2.4

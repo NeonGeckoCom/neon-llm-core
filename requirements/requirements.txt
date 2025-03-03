@@ -1,4 +1,6 @@
 # networking
-neon-mq-connector>=0.7.1a4
-ovos-utils~=0.0.32
-ovos-config~=0.0.10
+neon-mq-connector~=0.9
+neon_utils[sentry]~=1.12
+ovos-config~=0.0,>=0.0.10
+pydantic~=2.6
+neon-data-models~=0.0
