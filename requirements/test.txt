@@ -1,2 +1,3 @@
 pytest
 pytest-rabbitmq
+neon-minerva[rmq]~=0.0,>=0.2.1a3
