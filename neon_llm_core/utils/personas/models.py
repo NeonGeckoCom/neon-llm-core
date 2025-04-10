@@ -25,4 +25,5 @@
 # SOFTWARE,  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from neon_data_models.models.api.llm import LLMPersona as PersonaModel
-# TODO: Mark for deprecation
+from ovos_utils.log import log_deprecation
+log_deprecation("Import from `neon_data_models.models.api.llm` directly", "1.0.0")
