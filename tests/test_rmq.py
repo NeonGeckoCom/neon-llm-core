@@ -34,6 +34,8 @@ from neon_mq_connector.consumers import SelectConsumerThread
 from neon_mq_connector.utils.network_utils import dict_to_b64
 from pytest_rabbitmq.factories.executor import RabbitMqExecutor
 from neon_minerva.integration.rabbit_mq import rmq_instance
+from neon_data_models.models.api.mq import LLMProposeResponse
+from neon_data_models.models.api.llm import LLMPersona, LLMRequest
 
 from neon_llm_core.llm import NeonLLM
 from neon_llm_core.rmq import NeonLLMMQConnector
@@ -49,7 +51,10 @@ class NeonMockLlm(NeonLLMMQConnector):
                                                   "password": "test_llm_password"}}}}
         NeonLLMMQConnector.__init__(self, config=config)
         self._model = Mock()
+        self._model.llm_model_name = "mock_llm@test"
         self._model.ask.return_value = "Mock response"
+        self._model.query_model.return_value = LLMProposeResponse(
+            response="Mock response")
         self._model.get_sorted_answer_indexes.return_value = [0, 1]
         self.send_message = Mock()
         self._compose_opinion_prompt = Mock(return_value="Mock opinion prompt")
@@ -102,12 +107,15 @@ class TestNeonLLMMQConnector(TestCase):
         # Valid Request
         request = LLMProposeRequest(message_id="mock_message_id",
                                     routing_key="mock_routing_key",
+                                    persona=LLMPersona(persona_name="vanilla",
+                                                       enabled=True),
+                                    model=self.mq_llm.model.llm_model_name,
                                     query="Mock Query", history=[])
         self.mq_llm.handle_request(None, None, None,
                                    dict_to_b64(request.model_dump())).join()
-        self.mq_llm.model.ask.assert_called_with(message=request.query,
-                                                 chat_history=request.history,
-                                                 persona=request.persona)
+        self.mq_llm.model.query_model.assert_called_with(
+            LLMRequest(**request.model_dump()))
+
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)
         response = LLMProposeResponse(**response['request_data'])
@@ -115,7 +123,9 @@ class TestNeonLLMMQConnector(TestCase):
         self.assertEqual(request.routing_key, response.routing_key)
         self.assertEqual(request.message_id, response.message_id)
 
-        self.assertEqual(response.response, self.mq_llm.model.ask())
+        self.assertEqual(response.response,
+                          self.mq_llm.model.query_model(LLMProposeRequest(
+                              **request.model_dump())).response)
 
     def test_handle_opinion_request(self):
         from neon_data_models.models.api.mq import (LLMDiscussRequest,
@@ -124,6 +134,9 @@ class TestNeonLLMMQConnector(TestCase):
         request = LLMDiscussRequest(message_id="mock_message_id",
                                     routing_key="mock_routing_key",
                                     query="Mock Discuss", history=[],
+                                    persona=LLMPersona(persona_name="vanilla",
+                                                       enabled=True),
+                                    model=self.mq_llm.model.llm_model_name,
                                     options={"bot 1": "resp 1",
                                              "bot 2": "resp 2"})
         self.mq_llm.handle_opinion_request(None, None, None,

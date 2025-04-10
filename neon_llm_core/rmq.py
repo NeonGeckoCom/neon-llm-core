@@ -34,8 +34,9 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
-from neon_data_models.models.api.mq import (LLMProposeResponse,
-                                            LLMDiscussResponse, LLMVoteResponse, LLMDiscussRequest, LLMVoteRequest)
+from neon_data_models.models.api.mq import (
+    LLMProposeRequest, LLMProposeResponse, LLMDiscussRequest, 
+    LLMDiscussResponse, LLMVoteRequest, LLMVoteResponse)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
@@ -193,6 +194,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
     def _handle_request_async(self, request: dict):
         message_id = request["message_id"]
         routing_key = request["routing_key"]
+        query = request["query"]
 
         try:
             response = self.model.query_model(LLMRequest(**request))
@@ -221,7 +223,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
             try:
                 sorted_answer_idx = self.model.get_sorted_answer_indexes(
                     question=request.query, answers=request.responses,
-                    persona=request.persona.model_dump())
+                    persona=request.persona.model_dump() if request.persona 
+                            else {})
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
                 sorted_answer_idx = []
