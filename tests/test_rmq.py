@@ -32,9 +32,8 @@ from unittest.mock import Mock
 from mirakuru import ProcessExitedWithError
 from neon_mq_connector.consumers import SelectConsumerThread
 from neon_mq_connector.utils.network_utils import dict_to_b64
-from port_for import get_port
 from pytest_rabbitmq.factories.executor import RabbitMqExecutor
-from pytest_rabbitmq.factories.process import get_config
+from neon_minerva.integration.rabbit_mq import rmq_instance
 
 from neon_llm_core.llm import NeonLLM
 from neon_llm_core.rmq import NeonLLMMQConnector
@@ -67,53 +66,6 @@ class NeonMockLlm(NeonLLMMQConnector):
                                question: str,
                                answer: str) -> str:
         return self._compose_opinion_prompt(respondent_nick, question, answer)
-
-
-@pytest.fixture(scope="class")
-def rmq_instance(request, tmp_path_factory):
-    config = get_config(request)
-    rabbit_ctl = config["ctl"]
-    rabbit_server = config["server"]
-    rabbit_host = "127.0.0.1"
-    rabbit_port = get_port(config["port"])
-    rabbit_distribution_port = get_port(
-        config["distribution_port"], [rabbit_port]
-    )
-    assert rabbit_distribution_port
-    assert (
-            rabbit_distribution_port != rabbit_port
-    ), "rabbit_port and distribution_port can not be the same!"
-
-    tmpdir = tmp_path_factory.mktemp(f"pytest-rabbitmq-{request.fixturename}")
-
-    rabbit_plugin_path = config["plugindir"]
-
-    rabbit_logpath = config["logsdir"]
-
-    if not rabbit_logpath:
-        rabbit_logpath = tmpdir / "logs"
-
-    rabbit_executor = RabbitMqExecutor(
-        rabbit_server,
-        rabbit_host,
-        rabbit_port,
-        rabbit_distribution_port,
-        rabbit_ctl,
-        logpath=rabbit_logpath,
-        path=tmpdir,
-        plugin_path=rabbit_plugin_path,
-        node_name=config["node"],
-    )
-
-    rabbit_executor.start()
-
-    # Init RMQ config
-    rabbit_executor.rabbitctl_output("add_user", "test_llm_user",
-                                     "test_llm_password")
-    rabbit_executor.rabbitctl_output("add_vhost", "/llm")
-    rabbit_executor.rabbitctl_output("set_permissions", "-p", "/llm",
-                                     "test_llm_user", ".*", ".*", ".*")
-    request.cls.rmq_instance = rabbit_executor
 
 
 @pytest.mark.usefixtures("rmq_instance")
