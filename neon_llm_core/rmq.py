@@ -34,9 +34,10 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
+from neon_data_models.models.api.llm import LLMPersona
 from neon_data_models.models.api.mq import (
-    LLMProposeRequest, LLMProposeResponse, LLMDiscussRequest, 
-    LLMDiscussResponse, LLMVoteRequest, LLMVoteResponse)
+    LLMProposeResponse, LLMDiscussRequest, LLMDiscussResponse, LLMVoteRequest, 
+    LLMVoteResponse)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
@@ -66,6 +67,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self._last_persona_update = time()
         self._personas_provider = PersonasProvider(service_name=self.name,
                                                    ovos_config=self.ovos_config)
+        
+        self._default_persona = self._personas_provider.personas[0] if \
+            self._personas_provider.personas else \
+            LLMPersona(persona_name="vanilla", enabled=True)
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
@@ -195,7 +200,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
         message_id = request["message_id"]
         routing_key = request["routing_key"]
         query = request["query"]
-
+        request['persona'] = request.get('persona') or self._default_persona
+        request['model'] = request.get('model') or self.model.llm_model_name
         try:
             response = self.model.query_model(LLMRequest(**request))
         except ValueError as err:
@@ -215,6 +221,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
         Handles score requests (vote) from MQ to LLM
         :param body: request body (dict)
         """
+        body['persona'] = body.get('persona') or self._default_persona
+        body['model'] = body.get('model') or self.model.llm_model_name
         request = LLMVoteRequest(**body)
 
         if not request.responses:
@@ -244,6 +252,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
         Handles opinion requests (discuss) from MQ to LLM
         :param body: request body (dict)
         """
+        body['persona'] = body.get('persona') or self._default_persona
+        body['model'] = body.get('model') or self.model.llm_model_name
         request = LLMDiscussRequest(**body)
 
         if not request.options:

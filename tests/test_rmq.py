@@ -134,9 +134,6 @@ class TestNeonLLMMQConnector(TestCase):
         request = LLMDiscussRequest(message_id="mock_message_id",
                                     routing_key="mock_routing_key",
                                     query="Mock Discuss", history=[],
-                                    persona=LLMPersona(persona_name="vanilla",
-                                                       enabled=True),
-                                    model=self.mq_llm.model.llm_model_name,
                                     options={"bot 1": "resp 1",
                                              "bot 2": "resp 2"})
         self.mq_llm.handle_opinion_request(None, None, None,
