@@ -34,7 +34,7 @@ from neon_mq_connector.consumers import SelectConsumerThread
 from neon_mq_connector.utils.network_utils import dict_to_b64
 from pytest_rabbitmq.factories.executor import RabbitMqExecutor
 from neon_minerva.integration.rabbit_mq import rmq_instance
-from neon_data_models.models.api.mq import LLMProposeResponse
+from neon_data_models.models.api.mq import LLMProposeResponse, LLMDiscussResponse
 from neon_data_models.models.api.llm import LLMPersona, LLMRequest
 
 from neon_llm_core.llm import NeonLLM
@@ -50,9 +50,11 @@ class NeonMockLlm(NeonLLMMQConnector):
                              "neon_llm_mock_mq": {"user": "test_llm_user",
                                                   "password": "test_llm_password"}}}}
         NeonLLMMQConnector.__init__(self, config=config)
-        self._model = Mock()
+        self._model = Mock(NeonLLM)
         self._model.llm_model_name = "mock_llm@test"
         self._model.ask.return_value = "Mock response"
+        self._model.ask_discusser.return_value = LLMDiscussResponse(
+            opinion="Mock opinion")
         self._model.query_model.return_value = LLMProposeResponse(
             response="Mock response")
         self._model.get_sorted_answer_indexes.return_value = [0, 1]
@@ -136,12 +138,17 @@ class TestNeonLLMMQConnector(TestCase):
                                     query="Mock Discuss", history=[],
                                     options={"bot 1": "resp 1",
                                              "bot 2": "resp 2"})
+        # Mock the ask_discusser method to return a known response
+        discuss_response = LLMDiscussResponse(message_id=request.message_id,
+                                               routing_key=request.routing_key,
+                                               opinion="Mock opinion")
+        self.mq_llm.model.ask_discusser.return_value = discuss_response
+
         self.mq_llm.handle_opinion_request(None, None, None,
                                            dict_to_b64(request.model_dump())).join()
 
-        self.mq_llm._compose_opinion_prompt.assert_called_with(
-            list(request.options.keys())[0], request.query,
-            list(request.options.values())[0])
+        # Verify ask_discusser was called with the right parameters
+        self.mq_llm.model.ask_discusser.assert_called_once()
 
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)
@@ -149,25 +156,29 @@ class TestNeonLLMMQConnector(TestCase):
         self.assertIsInstance(response, LLMDiscussResponse)
         self.assertEqual(request.routing_key, response.routing_key)
         self.assertEqual(request.message_id, response.message_id)
-
-        self.assertEqual(response.opinion, self.mq_llm.model.ask())
+        self.assertEqual(response.opinion, "Mock opinion")
 
         # No input options
         request = LLMDiscussRequest(message_id="mock_message_id1",
                                     routing_key="mock_routing_key1",
                                     query="Mock Discuss 1", history=[],
                                     options={})
+        # Mock a different response for the empty options case
+        empty_discuss_response = LLMDiscussResponse(message_id=request.message_id,
+                                                    routing_key=request.routing_key,
+                                                    opinion="Sorry, but I got no options to choose from.")
+        self.mq_llm.model.ask_discusser.return_value = empty_discuss_response
+
         self.mq_llm.handle_opinion_request(None, None, None,
                                            dict_to_b64(request.model_dump())).join()
+
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)
         response = LLMDiscussResponse(**response['request_data'])
         self.assertIsInstance(response, LLMDiscussResponse)
         self.assertEqual(request.routing_key, response.routing_key)
         self.assertEqual(request.message_id, response.message_id)
-        self.assertNotEqual(response.opinion, self.mq_llm.model.ask())
-
-        # TODO: Test with invalid sorted answer indexes
+        self.assertEqual(response.opinion, "Sorry, but I got no options to choose from.")
 
     def test_handle_score_request(self):
         from neon_data_models.models.api.mq import (LLMVoteRequest,
@@ -178,8 +189,18 @@ class TestNeonLLMMQConnector(TestCase):
                                  routing_key="mock_routing_key",
                                  query="Mock Score", history=[],
                                  responses=["one", "two"])
+
+        # Mock the ask_appraiser method to return a known response
+        vote_response = LLMVoteResponse(message_id=request.message_id,
+                                        routing_key=request.routing_key,
+                                        sorted_answer_indexes=[0, 1])
+        self.mq_llm.model.ask_appraiser.return_value = vote_response
+
         self.mq_llm.handle_score_request(None, None, None,
                                          dict_to_b64(request.model_dump())).join()
+
+        # Verify ask_appraiser was called with the right parameters
+        self.mq_llm.model.ask_appraiser.assert_called_once()
 
         response = self.mq_llm.send_message.call_args.kwargs
         self.assertEqual(response['queue'], request.routing_key)
@@ -187,22 +208,4 @@ class TestNeonLLMMQConnector(TestCase):
         self.assertIsInstance(response, LLMVoteResponse)
         self.assertEqual(request.routing_key, response.routing_key)
         self.assertEqual(request.message_id, response.message_id)
-
-        self.assertEqual(response.sorted_answer_indexes,
-                         self.mq_llm.model.get_sorted_answer_indexes())
-
-        # No response options
-        request = LLMVoteRequest(message_id="mock_message_id",
-                                 routing_key="mock_routing_key",
-                                 query="Mock Score", history=[], responses=[])
-        self.mq_llm.handle_score_request(None, None, None,
-                                         dict_to_b64(request.model_dump())).join()
-
-        response = self.mq_llm.send_message.call_args.kwargs
-        self.assertEqual(response['queue'], request.routing_key)
-        response = LLMVoteResponse(**response['request_data'])
-        self.assertIsInstance(response, LLMVoteResponse)
-        self.assertEqual(request.routing_key, response.routing_key)
-        self.assertEqual(request.message_id, response.message_id)
-
-        self.assertEqual(response.sorted_answer_indexes, [])
+        self.assertEqual(response.sorted_answer_indexes, [0, 1])

@@ -123,9 +123,13 @@ class NeonLLM(ABC):
         """
         Override this method to implement CBF-specific logic
         """
-        return LLMProposeResponse(**self.query_model(request).model_dump())
+        return LLMProposeResponse(**self.query_model(request).model_dump(),
+                                  message_id=request.message_id,
+                                  routing_key=request.routing_key)
 
-    def ask_discusser(self, request: LLMDiscussRequest) -> LLMDiscussResponse:
+    def ask_discusser(self, request: LLMDiscussRequest,
+                      compose_prompt_method: Optional[callable] = None) -> \
+                        LLMDiscussResponse:
         """
         Override this method to implement CBF-specific logic
         """
@@ -136,7 +140,7 @@ class NeonLLM(ABC):
             opinion = "Sorry, but I experienced an issue trying to form "\
                       "an opinion on this topic"
             try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(
+                sorted_answer_indexes = self.get_sorted_answer_indexes(
                     question=request.query,
                     answers=list(request.options.values()),
                     persona=request.persona.model_dump())
@@ -144,7 +148,8 @@ class NeonLLM(ABC):
                     list(request.options.items())[sorted_answer_indexes[0]]
                 opinion = self._ask_model_for_opinion(
                     respondent_nick=best_respondent_nick,
-                    llm_request=request, answer=best_response)
+                    llm_request=request, answer=best_response,
+                    compose_opinion_prompt=compose_prompt_method)
             except ValueError as err:
                 LOG.error(f'ValueError={err}')
             except IndexError as err:
@@ -182,6 +187,17 @@ class NeonLLM(ABC):
         return LLMVoteResponse(message_id=request.message_id,
                                routing_key=request.routing_key,
                                sorted_answer_indexes=sorted_answer_indexes)
+
+    def _ask_model_for_opinion(self, llm_request: LLMRequest,
+                               respondent_nick: str,
+                               answer: str,
+                               compose_opinion_prompt: callable) -> str:
+        llm_request.query = compose_opinion_prompt(
+            respondent_nick=respondent_nick, question=llm_request.query,
+            answer=answer)
+        opinion = self.model.query_model(llm_request)
+        LOG.info(f'Received LLM opinion={opinion}, prompt={llm_request.query}')
+        return opinion.response
 
     @abstractmethod
     def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:

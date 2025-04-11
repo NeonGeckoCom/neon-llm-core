@@ -209,6 +209,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
                 response = self.model.ask_proposer(LLMProposeRequest(**request))
             else:
                 response = self.model.query_model(LLMRequest(**request))
+                response_kwargs = response.model_dump()
+                response_kwargs['message_id'] = message_id
+                response_kwargs['routing_key'] = routing_key
+                response = LLMProposeResponse(**response_kwargs)
         except ValueError as err:
             LOG.error(f'ValueError={err}')
         except Exception as e:
@@ -242,7 +246,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
         body['model'] = body.get('model') or self.model.llm_model_name
         request = LLMDiscussRequest(**body)
 
-        api_response = self.model.ask_discusser(request)
+        api_response = self.model.ask_discusser(request,
+                                                self.compose_opinion_prompt)
         self.send_message(request_data=api_response.model_dump(),
                           queue=request.routing_key)
         LOG.info(f"Handled ask request for message_id={request.message_id}")
