@@ -36,8 +36,8 @@ from neon_utils.logger import LOG
 
 from neon_data_models.models.api.llm import LLMPersona
 from neon_data_models.models.api.mq import (
-    LLMProposeResponse, LLMDiscussRequest, LLMDiscussResponse, LLMVoteRequest, 
-    LLMVoteResponse)
+    LLMProposeRequest, LLMProposeResponse, LLMDiscussRequest, 
+    LLMDiscussResponse, LLMVoteRequest, LLMVoteResponse)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
@@ -47,7 +47,8 @@ from neon_llm_core.utils.personas.provider import PersonasProvider
 
 class NeonLLMMQConnector(MQConnector, ABC):
     """
-        Module for processing MQ requests to Fast Chat LLM
+    Module to handle LLM requests from the MQ bus and respond with the attached
+    model's output
     """
 
     async_consumers_enabled = True
@@ -203,16 +204,18 @@ class NeonLLMMQConnector(MQConnector, ABC):
         request['persona'] = request.get('persona') or self._default_persona
         request['model'] = request.get('model') or self.model.llm_model_name
         try:
-            response = self.model.query_model(LLMRequest(**request))
+            if request.get('prompt_data'):
+                # This indicates a CBF prompt
+                response = self.model.ask_proposer(LLMProposeRequest(**request))
+            else:
+                response = self.model.query_model(LLMRequest(**request))
         except ValueError as err:
             LOG.error(f'ValueError={err}')
         except Exception as e:
             LOG.exception(e)
-        api_response = LLMProposeResponse(message_id=message_id,
-                                          response=response.response,
-                                          routing_key=routing_key)
-        LOG.info(f"Sending response: {api_response}")
-        self.send_message(request_data=api_response.model_dump(),
+
+        LOG.info(f"Sending response: {response}")
+        self.send_message(request_data=response.model_dump(),
                           queue=routing_key)
         LOG.info(f"Handled ask request for query={query}")
 
@@ -225,24 +228,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         body['model'] = body.get('model') or self.model.llm_model_name
         request = LLMVoteRequest(**body)
 
-        if not request.responses:
-            sorted_answer_idx = []
-        else:
-            try:
-                sorted_answer_idx = self.model.get_sorted_answer_indexes(
-                    question=request.query, answers=request.responses,
-                    persona=request.persona.model_dump() if request.persona 
-                            else {})
-            except ValueError as err:
-                LOG.error(f'ValueError={err}')
-                sorted_answer_idx = []
-            except Exception as e:
-                LOG.exception(e)
-                sorted_answer_idx = []
-
-        api_response = LLMVoteResponse(message_id=request.message_id,
-                                       routing_key=request.routing_key,
-                                       sorted_answer_indexes=sorted_answer_idx)
+        api_response = self.model.ask_appraiser(request)
         self.send_message(request_data=api_response.model_dump(),
                           queue=request.routing_key)
         LOG.info(f"Handled score request for message_id={request.message_id}")
@@ -256,33 +242,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         body['model'] = body.get('model') or self.model.llm_model_name
         request = LLMDiscussRequest(**body)
 
-        if not request.options:
-            opinion = "Sorry, but I got no options to choose from."
-        else:
-            # Default opinion if the model fails to respond
-            opinion = "Sorry, but I experienced an issue trying to form "\
-                      "an opinion on this topic"
-            try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(
-                    question=request.query,
-                    answers=list(request.options.values()),
-                    persona=request.persona.model_dump())
-                best_respondent_nick, best_response = \
-                    list(request.options.items())[sorted_answer_indexes[0]]
-                opinion = self._ask_model_for_opinion(
-                    respondent_nick=best_respondent_nick,
-                    llm_request=LLMRequest(**body), answer=best_response)
-            except ValueError as err:
-                LOG.error(f'ValueError={err}')
-            except IndexError as err:
-                # Failed response will return an empty list
-                LOG.error(f'IndexError={err}')
-            except Exception as e:
-                LOG.exception(e)
-
-        api_response = LLMDiscussResponse(message_id=request.message_id,
-                                          routing_key=request.routing_key,
-                                          opinion=opinion)
+        api_response = self.model.ask_discusser(request)
         self.send_message(request_data=api_response.model_dump(),
                           queue=request.routing_key)
         LOG.info(f"Handled ask request for message_id={request.message_id}")

@@ -27,8 +27,10 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Union
 
-from neon_data_models.models.api import LLMRequest, LLMResponse
-from ovos_utils.log import log_deprecation
+from neon_data_models.models.api import LLMRequest, LLMResponse, \
+    LLMProposeRequest, LLMProposeResponse, LLMDiscussRequest, \
+    LLMDiscussResponse, LLMVoteRequest, LLMVoteResponse
+from ovos_utils.log import LOG, log_deprecation
 
 
 class NeonLLM(ABC):
@@ -115,6 +117,71 @@ class NeonLLM(ABC):
         response = self._call_model(request.query, request)
         history = request.history + [("llm", response)]
         return LLMResponse(response=response, history=history)
+
+
+    def ask_proposer(self, request: LLMProposeRequest) -> LLMProposeResponse:
+        """
+        Override this method to implement CBF-specific logic
+        """
+        return LLMProposeResponse(**self.query_model(request).model_dump())
+
+    def ask_discusser(self, request: LLMDiscussRequest) -> LLMDiscussResponse:
+        """
+        Override this method to implement CBF-specific logic
+        """
+        if not request.options:
+            opinion = "Sorry, but I got no options to choose from."
+        else:
+            # Default opinion if the model fails to respond
+            opinion = "Sorry, but I experienced an issue trying to form "\
+                      "an opinion on this topic"
+            try:
+                sorted_answer_indexes = self.model.get_sorted_answer_indexes(
+                    question=request.query,
+                    answers=list(request.options.values()),
+                    persona=request.persona.model_dump())
+                best_respondent_nick, best_response = \
+                    list(request.options.items())[sorted_answer_indexes[0]]
+                opinion = self._ask_model_for_opinion(
+                    respondent_nick=best_respondent_nick,
+                    llm_request=request, answer=best_response)
+            except ValueError as err:
+                LOG.error(f'ValueError={err}')
+            except IndexError as err:
+                # Failed response will return an empty list
+                LOG.error(f'IndexError={err}')
+            except Exception as e:
+                LOG.exception(e)
+
+        return LLMDiscussResponse(message_id=request.message_id,
+                                  routing_key=request.routing_key,
+                                  opinion=opinion)
+
+    def ask_appraiser(self, request: LLMVoteRequest) -> LLMVoteResponse:
+        """
+        Override this method to implement CBF-specific logic
+        """
+        if not request.responses:
+            sorted_answer_indexes = []
+        else:
+            # Default opinion if the model fails to respond
+            sorted_answer_indexes = []
+            try:
+                sorted_answer_indexes = self.get_sorted_answer_indexes(
+                    question=request.query,
+                    answers=request.responses,
+                    persona=request.persona.model_dump())
+            except ValueError as err:
+                LOG.error(f'ValueError={err}')
+            except IndexError as err:
+                # Failed response will return an empty list
+                LOG.error(f'IndexError={err}')
+            except Exception as e:
+                LOG.exception(e)
+
+        return LLMVoteResponse(message_id=request.message_id,
+                               routing_key=request.routing_key,
+                               sorted_answer_indexes=sorted_answer_indexes)
 
     @abstractmethod
     def get_sorted_answer_indexes(self, question: str, answers: List[str], persona: dict) -> List[int]:
