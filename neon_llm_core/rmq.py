@@ -29,15 +29,15 @@ from threading import Thread, Lock
 from time import time
 from typing import Optional
 
+from neon_data_models.models.api import LLMRequest
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 
+from neon_data_models.models.api.llm import LLMPersona
 from neon_data_models.models.api.mq import (
-    LLMProposeResponse,
-    LLMDiscussResponse,
-    LLMVoteResponse,
-)
+    LLMProposeRequest, LLMProposeResponse, LLMDiscussRequest, 
+    LLMDiscussResponse, LLMVoteRequest, LLMVoteResponse)
 
 from neon_llm_core.utils.config import load_config
 from neon_llm_core.llm import NeonLLM
@@ -47,7 +47,8 @@ from neon_llm_core.utils.personas.provider import PersonasProvider
 
 class NeonLLMMQConnector(MQConnector, ABC):
     """
-        Module for processing MQ requests to Fast Chat LLM
+    Module to handle LLM requests from the MQ bus and respond with the attached
+    model's output
     """
 
     async_consumers_enabled = True
@@ -67,6 +68,10 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self._last_persona_update = time()
         self._personas_provider = PersonasProvider(service_name=self.name,
                                                    ovos_config=self.ovos_config)
+        
+        self._default_persona = self._personas_provider.personas[0] if \
+            self._personas_provider.personas else \
+            LLMPersona(persona_name="vanilla", enabled=True)
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
@@ -195,26 +200,26 @@ class NeonLLMMQConnector(MQConnector, ABC):
     def _handle_request_async(self, request: dict):
         message_id = request["message_id"]
         routing_key = request["routing_key"]
-
         query = request["query"]
-        history = request["history"]
-        persona = request.get("persona", {})
-        LOG.debug(f"Request persona={persona}|key={routing_key}")
-        # Default response if the model fails to respond
-        response = 'Sorry, but I cannot respond to your message at the '\
-                   'moment; please, try again later'
+        request['persona'] = request.get('persona') or self._default_persona
+        request['model'] = request.get('model') or self.model.llm_model_name
         try:
-            response = self.model.ask(message=query, chat_history=history,
-                                      persona=persona)
+            if request.get('prompt_data'):
+                # This indicates a CBF prompt
+                response = self.model.ask_proposer(LLMProposeRequest(**request))
+            else:
+                response = self.model.query_model(LLMRequest(**request))
+                response_kwargs = response.model_dump()
+                response_kwargs['message_id'] = message_id
+                response_kwargs['routing_key'] = routing_key
+                response = LLMProposeResponse(**response_kwargs)
         except ValueError as err:
             LOG.error(f'ValueError={err}')
         except Exception as e:
             LOG.exception(e)
-        api_response = LLMProposeResponse(message_id=message_id,
-                                          response=response,
-                                          routing_key=routing_key)
-        LOG.debug(f"Sending response: {response}")
-        self.send_message(request_data=api_response.model_dump(),
+
+        LOG.info(f"Sending response: {response}")
+        self.send_message(request_data=response.model_dump(),
                           queue=routing_key)
         LOG.info(f"Handled ask request for query={query}")
 
@@ -223,84 +228,39 @@ class NeonLLMMQConnector(MQConnector, ABC):
         Handles score requests (vote) from MQ to LLM
         :param body: request body (dict)
         """
-        message_id = body["message_id"]
-        routing_key = body["routing_key"]
+        body['persona'] = body.get('persona') or self._default_persona
+        body['model'] = body.get('model') or self.model.llm_model_name
+        request = LLMVoteRequest(**body)
 
-        query = body["query"]
-        responses = body["responses"]
-        persona = body.get("persona", {})
-
-        if not responses:
-            sorted_answer_idx = []
-        else:
-            try:
-                sorted_answer_idx = self.model.get_sorted_answer_indexes(
-                    question=query, answers=responses, persona=persona)
-            except ValueError as err:
-                LOG.error(f'ValueError={err}')
-                sorted_answer_idx = []
-            except Exception as e:
-                LOG.exception(e)
-                sorted_answer_idx = []
-
-        api_response = LLMVoteResponse(message_id=message_id,
-                                       routing_key=routing_key,
-                                       sorted_answer_indexes=sorted_answer_idx)
+        api_response = self.model.ask_appraiser(request)
         self.send_message(request_data=api_response.model_dump(),
-                          queue=routing_key)
-        LOG.info(f"Handled score request for query={query}")
+                          queue=request.routing_key)
+        LOG.info(f"Handled score request for message_id={request.message_id}")
 
     def _handle_opinion_async(self, body: dict):
         """
         Handles opinion requests (discuss) from MQ to LLM
         :param body: request body (dict)
         """
-        message_id = body["message_id"]
-        routing_key = body["routing_key"]
+        body['persona'] = body.get('persona') or self._default_persona
+        body['model'] = body.get('model') or self.model.llm_model_name
+        request = LLMDiscussRequest(**body)
 
-        query = body["query"]
-        options = body["options"]
-        persona = body.get("persona", {})
-        responses = list(options.values())
-
-        if not responses:
-            opinion = "Sorry, but I got no options to choose from."
-        else:
-            # Default opinion if the model fails to respond
-            opinion = "Sorry, but I experienced an issue trying to form "\
-                      "an opinion on this topic"
-            try:
-                sorted_answer_indexes = self.model.get_sorted_answer_indexes(
-                    question=query, answers=responses, persona=persona)
-                best_respondent_nick, best_response = list(options.items())[
-                    sorted_answer_indexes[0]]
-                opinion = self._ask_model_for_opinion(
-                    respondent_nick=best_respondent_nick,
-                    question=query, answer=best_response, persona=persona)
-            except ValueError as err:
-                LOG.error(f'ValueError={err}')
-            except IndexError as err:
-                # Failed response will return an empty list
-                LOG.error(f'IndexError={err}')
-            except Exception as e:
-                LOG.exception(e)
-
-        api_response = LLMDiscussResponse(message_id=message_id,
-                                          routing_key=routing_key,
-                                          opinion=opinion)
+        api_response = self.model.ask_discusser(request,
+                                                self.compose_opinion_prompt)
         self.send_message(request_data=api_response.model_dump(),
-                          queue=routing_key)
-        LOG.info(f"Handled discuss request for query={query}")
+                          queue=request.routing_key)
+        LOG.info(f"Handled ask request for message_id={request.message_id}")
 
-    def _ask_model_for_opinion(self, respondent_nick: str, question: str,
-                               answer: str, persona: dict) -> str:
-        prompt = self.compose_opinion_prompt(respondent_nick=respondent_nick,
-                                             question=question,
-                                             answer=answer)
-        opinion = self.model.ask(message=prompt, chat_history=[],
-                                 persona=persona)
-        LOG.info(f'Received LLM opinion={opinion}, prompt={prompt}')
-        return opinion
+    def _ask_model_for_opinion(self, llm_request: LLMRequest,
+                               respondent_nick: str,
+                               answer: str) -> str:
+        llm_request.query = self.compose_opinion_prompt(
+            respondent_nick=respondent_nick, question=llm_request.query,
+            answer=answer)
+        opinion = self.model.query_model(llm_request)
+        LOG.info(f'Received LLM opinion={opinion}, prompt={llm_request.query}')
+        return opinion.response
 
     @staticmethod
     @abstractmethod
