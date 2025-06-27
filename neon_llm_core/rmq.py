@@ -32,7 +32,8 @@ from typing import Optional
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
-
+from ovos_utils.process_utils import ProcessState, ProcessStatus
+from neon_data_models.models.api.llm import LLMPersona
 from neon_data_models.models.api.mq import (
     LLMProposeResponse,
     LLMDiscussResponse,
@@ -54,7 +55,8 @@ class NeonLLMMQConnector(MQConnector, ABC):
 
     def __init__(self, config: Optional[dict] = None):
         self.service_name = f'neon_llm_{self.name}'
-
+        self.status = ProcessStatus(self.service_name)
+        self.status.set_alive()
         self.ovos_config = config or load_config()
         mq_config = self.ovos_config.get("MQ", dict())
         super().__init__(config=mq_config, service_name=self.service_name)
@@ -67,6 +69,12 @@ class NeonLLMMQConnector(MQConnector, ABC):
         self._last_persona_update = time()
         self._personas_provider = PersonasProvider(service_name=self.name,
                                                    ovos_config=self.ovos_config)
+
+    def check_health(self) -> bool:
+        if not MQConnector.check_health(self):
+            self.status.set_error("MQConnector health check failed")
+            return False
+        return self.status == ProcessState.READY
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
@@ -318,10 +326,14 @@ class NeonLLMMQConnector(MQConnector, ABC):
             run_observer: Optional[bool] = None, **kwargs):
         MQConnector.run(self, run_consumers=run_consumers, run_sync=run_sync,
                         run_observer=run_observer, **kwargs)
+        LOG.info("MQ Connections started")
         if not self.started:
             raise RuntimeError(f'Failed to connect to MQ. config={self.config}')
         self._personas_provider.start_sync()
+        LOG.info("Personas provider sync thread started")
+        self.status.set_ready()
 
     def stop(self):
+        self.status.set_stopping()
         super().stop()
         self._personas_provider.stop_sync()
