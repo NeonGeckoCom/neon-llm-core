@@ -325,11 +325,11 @@ class NeonLLMMQConnector(MQConnector, ABC):
             run_observer: Optional[bool] = None, **kwargs):
         MQConnector.run(self, run_consumers=run_consumers, run_sync=run_sync,
                         run_observer=run_observer, **kwargs)
-        LOG.info("MQ Connections started")
+        LOG.debug("MQ Connections started")
         if not self.started:
             raise RuntimeError(f'Failed to connect to MQ. config={self.config}')
         self._personas_provider.start_sync()
-        LOG.info("Personas provider sync thread started")
+        LOG.debug("Personas provider sync thread started")
         self.status.set_ready()
 
     def stop(self):
