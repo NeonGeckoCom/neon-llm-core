@@ -8,5 +8,3 @@ on:
 jobs:
   license_tests:
     uses: neongeckocom/.github/.github/workflows/license_tests.yml@master
-    with:
-      packages-exclude: '^(neon-llm-core|tqdm|RapidFuzz|typing_extensions|urllib3).*'
