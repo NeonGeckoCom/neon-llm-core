@@ -33,7 +33,6 @@ from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
 from ovos_utils.process_utils import ProcessState, ProcessStatus
-from neon_data_models.models.api.llm import LLMPersona
 from neon_data_models.models.api.mq import (
     LLMProposeResponse,
     LLMDiscussResponse,
