@@ -32,7 +32,7 @@ from typing import Optional
 from neon_mq_connector.connector import MQConnector
 from neon_mq_connector.utils.rabbit_utils import create_mq_callback
 from neon_utils.logger import LOG
-from ovos_utils.process_utils import ProcessState, ProcessStatus
+from ovos_utils.process_utils import ProcessStatus
 from neon_data_models.models.api.mq import (
     LLMProposeResponse,
     LLMDiscussResponse,
@@ -73,7 +73,7 @@ class NeonLLMMQConnector(MQConnector, ABC):
         if not MQConnector.check_health(self):
             self.status.set_error("MQConnector health check failed")
             return False
-        return self.status == ProcessState.READY
+        return self.status.check_ready()
 
     def register_consumers(self):
         for idx in range(self.model_config.get("num_parallel_processes", 1)):
