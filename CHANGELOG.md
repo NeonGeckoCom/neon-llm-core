@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1a2](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.2.1a2) (2025-07-02)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.2.1a1...0.2.1a2)
+
+**Merged pull requests:**
+
+- Implement Health Checks [\#29](https://github.com/NeonGeckoCom/neon-llm-core/pull/29) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.2.1a1](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.2.1a1) (2025-04-10)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.2.0...0.2.1a1)
