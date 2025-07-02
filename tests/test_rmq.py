@@ -93,7 +93,7 @@ class TestNeonLLMMQConnector(TestCase):
                          self.mq_llm.name)
         self.assertTrue(self.mq_llm.async_consumers_enabled)
         self.assertEqual(self.mq_llm.consumer_thread_cls, SelectConsumerThread)
-        self.assertTrue(self.mq_llm.check_health())
+        self.assertFalse(self.mq_llm.check_health())  # MQ Connector not started in tests
         for consumer in self.mq_llm.consumers.values():
             self.assertIsInstance(consumer, SelectConsumerThread)
 
