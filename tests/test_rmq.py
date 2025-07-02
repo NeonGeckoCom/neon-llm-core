@@ -33,7 +33,7 @@ from mirakuru import ProcessExitedWithError
 from neon_mq_connector.consumers import SelectConsumerThread
 from neon_mq_connector.utils.network_utils import dict_to_b64
 from pytest_rabbitmq.factories.executor import RabbitMqExecutor
-from neon_minerva.integration.rabbit_mq import rmq_instance
+from neon_minerva.integration.rabbit_mq import rmq_instance  # noqa: F401
 
 from neon_llm_core.llm import NeonLLM
 from neon_llm_core.rmq import NeonLLMMQConnector
@@ -93,6 +93,7 @@ class TestNeonLLMMQConnector(TestCase):
                          self.mq_llm.name)
         self.assertTrue(self.mq_llm.async_consumers_enabled)
         self.assertEqual(self.mq_llm.consumer_thread_cls, SelectConsumerThread)
+        self.assertFalse(self.mq_llm.check_health())  # MQ Connector not started in tests
         for consumer in self.mq_llm.consumers.values():
             self.assertIsInstance(consumer, SelectConsumerThread)
 
