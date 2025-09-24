@@ -48,7 +48,7 @@ class LLMBot(ChatBot):
 
     def __init__(self, *args, **kwargs):
         ChatBot.__init__(self, *args, **kwargs)
-        self.supports_raw_conversation = False
+        # self.supports_raw_conversation = False
         self.bot_type = "submind"
         self.base_llm = kwargs["llm_name"]  # chatgpt, fastchat, etc.
         self.persona = kwargs["persona"]
