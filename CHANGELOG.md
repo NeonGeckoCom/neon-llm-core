@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.1a3](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.2.1a3) (2025-09-25)
+
+[Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.2.1a2...0.2.1a3)
+
+**Merged pull requests:**
+
+- Disable raw conversation handling [\#30](https://github.com/NeonGeckoCom/neon-llm-core/pull/30) ([NeonDaniel](https://github.com/NeonDaniel))
+
 ## [0.2.1a2](https://github.com/NeonGeckoCom/neon-llm-core/tree/0.2.1a2) (2025-07-02)
 
 [Full Changelog](https://github.com/NeonGeckoCom/neon-llm-core/compare/0.2.1a1...0.2.1a2)
